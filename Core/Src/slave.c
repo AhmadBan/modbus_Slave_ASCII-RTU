@@ -155,6 +155,18 @@ float GetHoldingRegisterValue_f32(uint16_t adr)
 }
 
 
+void SetHoldingRegisterValue_u16_driver(uint16_t adr, uint16_t value)
+{
+    if ( adr < 0 || adr > MAX_HOLDING_REGISTERS || value < 0 || value > 65535)
+    {
+        return ;   // invalid register address
+    }
+    else
+    {
+    	holdingRegister.u16_holding_registers_array[adr] = value;
+    }
+}
+
 void SetHoldingRegisterValue_u16(uint16_t adr, uint16_t value)
 {
     if ( adr < 0 || adr > MAX_HOLDING_REGISTERS || value < 0 || value > 65535)

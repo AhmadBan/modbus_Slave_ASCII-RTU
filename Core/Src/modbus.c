@@ -120,7 +120,7 @@ void execute_modbus_command(uint8_t *buffer,uint8_t size)
         }        
         case 16:
         {              
-            ResponsePresetMultipleRegisters_16(buffer,size,mb);
+            sendIndex=ResponsePresetMultipleRegisters_16(buffer,size,mb);
             break;            
         }        
         default: 
@@ -374,9 +374,12 @@ uint8_t ResponsePresetMultipleRegisters_16(uint8_t *buffer, uint8_t size,Modbus_
 //    cant = AsciiToTwoByte();
 //    limit = start + cant;
 //
-    byte_count = AsciiToByte(ascii_frame[13], ascii_frame[14] );
+    byte_count = AsciiToByte(buffer[13], buffer[14] );
     sendIndex = 15;
-//
+    for(i=5;i<13;i++)
+    {
+    	sendBuffer[i]=buffer[i];
+    }
 //    /* read and set new holding registers values */
     byte_count /= 2;
 
@@ -384,7 +387,7 @@ uint8_t ResponsePresetMultipleRegisters_16(uint8_t *buffer, uint8_t size,Modbus_
     for ( i = 0; i < byte_count; i++ )
     {
         reg_value = AsciiToTwoByte(&buffer[sendIndex]);
-        SetHoldingRegisterValue_u16(mb.start++, reg_value);
+        SetHoldingRegisterValue_u16_driver(mb.start++, reg_value);
         sendIndex+=4;
     }
 

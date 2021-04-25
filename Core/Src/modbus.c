@@ -318,7 +318,7 @@ uint8_t ResponsePresetSingleRegister_06(uint8_t *buffer, uint8_t size)  //0x06, 
     registerID = AsciiToTwoByte(&buffer[5]);     //register index
 
     value = AsciiToTwoByte(&buffer[9]);          //register value
-    SetHoldingRegisterValue_u16(registerID, value);
+    SetHoldingRegisterValue_u16_driver(registerID, value);
     for(int i=5;i<13;i++){
         	sendBuffer[i]=buffer[i];
         }

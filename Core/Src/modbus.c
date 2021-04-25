@@ -264,7 +264,7 @@ uint8_t ResponseReadHoldingRegisters_03(uint8_t *buffer, uint8_t size,Modbus_t m
     for ( int i = mb.start; i < mb.limit; i++ )
     {
         //implement here what is needed to get holding registers
-    	status = GetHoldingRegisterValue_u16(i);//put counter here for test
+    	status = GetHoldingRegisterValue_u16_driver(i);//put counter here for test
 
     	ByteToAscii(status,&sendBuffer[sendIndex],2);//change data to ASCII and filling send buffer correspondingly
         sendIndex+=4;//every two bytes of data require 4 byte ASCII code
@@ -284,7 +284,7 @@ uint8_t ResponseReadInputRegisters_04(uint8_t *buffer, uint8_t size,Modbus_t mb)
 	    for ( int i = mb.start; i < mb.limit; i++ )
 	    {
 	        //implement here what is needed to get holding registers
-	    	status = GetInputRegisterValue_u16(i);//put counter here for test
+	    	status = GetInputRegisterValue_u16_driver(i);//put counter here for test
 	    	ByteToAscii(status,&sendBuffer[sendIndex],2);//change data to ASCII and filling send buffer correspondingly
 	        sendIndex+=4;//every two bytes of data require 4 byte ASCII code
 	    }

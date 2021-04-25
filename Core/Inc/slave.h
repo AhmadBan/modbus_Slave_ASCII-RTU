@@ -20,7 +20,7 @@ extern uint16_t holding_registers_array[MAX_HOLDING_REGISTERS];
 uint8_t GetCoilValue(uint16_t adr);
 void SetCoilValue(uint16_t adr, uint8_t value);
 
-
+uint16_t GetHoldingRegisterValue_u16_driver(uint16_t adr);
 uint16_t GetHoldingRegisterValue_u16(uint16_t adr);
 int16_t GetHoldingRegisterValue_s16(uint16_t adr);
 //care must be taken to pass correct address because it returns 32-bit unsigned
@@ -35,7 +35,7 @@ void SetHoldingRegisterValue_u32(uint16_t adr, uint32_t value);
 void SetHoldingRegisterValue_s32(uint16_t adr, int32_t value);
 void SetHoldingRegisterValue_f32(uint16_t adr, float value);
 
-uint16_t GetHoldingRegisterValue_u16_driver(uint16_t adr);
+uint16_t GetInputRegisterValue_u16_driver(uint16_t adr);
 uint16_t GetInputRegisterValue_u16(uint16_t adr);
 int16_t GetInputRegisterValue_s16(uint16_t adr);
 //care must be taken to pass correct address because it returns 32-bit unsigned
@@ -45,7 +45,7 @@ float GetInputRegisterValue_f32(uint16_t adr);
 
 
 void SetInputRegisterValue_u16(uint16_t adr, uint16_t value);
-uint16_t GetInputRegisterValue_u16_driver(uint16_t adr);
+
 
 void SetInputRegisterValue_s16(uint16_t adr, int16_t value);
 

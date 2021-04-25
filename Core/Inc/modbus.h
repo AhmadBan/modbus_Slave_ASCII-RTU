@@ -3,7 +3,8 @@
 #include <ascii.h>
 
 /* ASCII FRAME size */
-#define ASCII_FRAME_SIZE 100   //CHANGE
+
+#define ASCII_FRAME_SIZE MAX_HOLDING_REGISTERS*4+20   // In worst case if master try to read all of the register with one command send buffer must have length_of_register*4+header(which is less than 20 bytes)
 
 /* ASCII FRAME END CHARS */
 #define CR 0x0D
@@ -27,6 +28,6 @@ uint8_t ResponseReadHoldingRegisters_03(uint8_t *buffer, uint8_t size,Modbus_t m
 uint8_t ResponseReadInputRegisters_04(uint8_t *buffer, uint8_t size,Modbus_t mb);
 uint8_t ResponseForceSingleCoil_05(uint8_t *buffer, uint8_t size);
 uint8_t ResponsePresetSingleRegister_06(uint8_t *buffer, uint8_t size);
-void ResponseForceMultipleCoils_15(uint8_t *buffer, uint8_t size);
-void ResponsePresetMultipleRegisters_16(uint8_t *buffer, uint8_t size);
+uint8_t  ResponseForceMultipleCoils_15(uint8_t *buffer, uint8_t size,Modbus_t mb);
+uint8_t ResponsePresetMultipleRegisters_16(uint8_t *buffer, uint8_t size,Modbus_t mb);
 

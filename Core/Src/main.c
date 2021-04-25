@@ -28,6 +28,7 @@
 /* USER CODE BEGIN Includes */
 
 #include "Modbus.h"
+#include "slave.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,8 +48,25 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t rx;
+
 uint8_t mbBuffer[ASCII_FRAME_SIZE];
+extern union{
+	uint16_t  u16_holding_registers_array[MAX_HOLDING_REGISTERS];
+	int16_t s16_holding_registers_array[MAX_HOLDING_REGISTERS];
+	uint32_t u32_holding_registers_array[MAX_HOLDING_REGISTERS/2];
+	int32_t s32_holding_registers_array[MAX_HOLDING_REGISTERS/2];
+	float f32_holding_registers_array[MAX_HOLDING_REGISTERS/2];
+
+}holdingRegister;
+
+extern union{
+	uint16_t  u16_input_registers_array[MAX_INPUTS_REGISTERS];
+	int16_t s16_input_registers_array[MAX_INPUTS_REGISTERS];
+	uint32_t u32_input_registers_array[MAX_INPUTS_REGISTERS/2];
+	int32_t s32_input_registers_array[MAX_INPUTS_REGISTERS/2];
+	float f32_input_registers_array[MAX_INPUTS_REGISTERS/2];
+}inputRegister;
+
 
 /* USER CODE END PV */
 
@@ -97,12 +115,26 @@ int main(void)
   /* USER CODE BEGIN 2 */
   //HAL_UART_Receive_IT(&huart1, &rx, 1);
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
+  SetHoldingRegisterValue_s16(50,-9999);
+  SetHoldingRegisterValue_u16(1,9998);
+  SetHoldingRegisterValue_u32(10,66888);
+  SetHoldingRegisterValue_s32(11,-66888);
+  SetHoldingRegisterValue_f32(12,10.2134f);
+
+
+  SetInputRegisterValue_s16(17,-9999);
+  SetInputRegisterValue_u16(12,9998);
+  SetInputRegisterValue_u32(20,66888);
+  SetInputRegisterValue_s32(19,-66888);
+  SetInputRegisterValue_f32(15,10.2134f);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
+
+		 HAL_Delay(100);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -157,39 +189,13 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
+
 	execute_modbus_command(mbBuffer,Size);
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
 }
 
 
-uint8_t mbIndex=0;
-volatile uint8_t sof=0,eof=1,lastChar=0;
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
 
-	switch(rx)
-	{
-
-	case ':':
-		sof=1;
-		mbIndex=0;//reset the index to start recording new frame
-
-		break;
-	case '\n':
-		sof=0;
-		//here we can synchronously process the frame buffer or release a semaphore for a task waiting for this buffer
-		execute_modbus_command(mbBuffer,mbIndex);
-		break;
-
-	default:
-		if(sof)
-			mbBuffer[mbIndex++]=rx;
-		break;
-	}
-
-	lastChar=rx;
-	HAL_UART_Receive_IT(&huart1, &rx, 1);
-}
 /* USER CODE END 4 */
 
  /**

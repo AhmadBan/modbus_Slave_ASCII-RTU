@@ -115,12 +115,12 @@ void execute_modbus_command(uint8_t *buffer,uint8_t size)
         }
         case 15:
         {                     
-            ResponseForceMultipleCoils_15(buffer,size);
+            ResponseForceMultipleCoils_15(buffer,size,mb);
             break;            
         }        
         case 16:
         {              
-            ResponsePresetMultipleRegisters_16(buffer,size);
+            ResponsePresetMultipleRegisters_16(buffer,size,mb);
             break;            
         }        
         default: 
@@ -231,7 +231,7 @@ uint8_t  ResponseReadInputStatus_02(uint8_t *buffer, uint8_t size,Modbus_t mb) /
 			inputs = 0;
 			while ( k < 8 && i + k < mb.limit)
 			{
-				uint8_t val =GetInputValue(i + k);    // status of input i+k
+				uint8_t val =GetInputRegisterValue_u16(i + k);    // status of input i+k
 				if ( val == 1 ) //input active
 				{
 					inputs |= (1 << k);
@@ -264,7 +264,8 @@ uint8_t ResponseReadHoldingRegisters_03(uint8_t *buffer, uint8_t size,Modbus_t m
     for ( int i = mb.start; i < mb.limit; i++ )
     {
         //implement here what is needed to get holding registers
-    	status = GetHoldingRegisterValue(i);//put counter here for test
+    	status = GetHoldingRegisterValue_u16(i);//put counter here for test
+
     	ByteToAscii(status,&sendBuffer[sendIndex],2);//change data to ASCII and filling send buffer correspondingly
         sendIndex+=4;//every two bytes of data require 4 byte ASCII code
     }
@@ -283,7 +284,7 @@ uint8_t ResponseReadInputRegisters_04(uint8_t *buffer, uint8_t size,Modbus_t mb)
 	    for ( int i = mb.start; i < mb.limit; i++ )
 	    {
 	        //implement here what is needed to get holding registers
-	    	status = GetInputRegisterValue(i);//put counter here for test
+	    	status = GetInputRegisterValue_u16(i);//put counter here for test
 	    	ByteToAscii(status,&sendBuffer[sendIndex],2);//change data to ASCII and filling send buffer correspondingly
 	        sendIndex+=4;//every two bytes of data require 4 byte ASCII code
 	    }
@@ -293,7 +294,6 @@ uint8_t  ResponseForceSingleCoil_05(uint8_t *buffer, uint8_t size) // 0x05, OK!!
 {
     uint16_t coilID = 0;
     uint16_t value =  0;
-    uint16_t i = 0;
 
     coilID = AsciiToTwoByte(&buffer[5]);     //coil index
 
@@ -314,12 +314,11 @@ uint8_t ResponsePresetSingleRegister_06(uint8_t *buffer, uint8_t size)  //0x06, 
 {
     uint16_t registerID = 0;
     uint16_t value =  0;
-    uint16_t i = 0;
 
     registerID = AsciiToTwoByte(&buffer[5]);     //register index
 
     value = AsciiToTwoByte(&buffer[9]);          //register value
-    SetHoldingRegisterValue(registerID, value);
+    SetHoldingRegisterValue_u16(registerID, value);
     for(int i=5;i<13;i++){
         	sendBuffer[i]=buffer[i];
         }
@@ -327,93 +326,68 @@ uint8_t ResponsePresetSingleRegister_06(uint8_t *buffer, uint8_t size)  //0x06, 
         return 13;
 }
 
-void ResponseForceMultipleCoils_15(uint8_t *buffer, uint8_t size) // 0x0F, OK
+uint8_t  ResponseForceMultipleCoils_15(uint8_t *buffer, uint8_t size,Modbus_t mb) // 0x0F, OK
 {
-//    uint16_t start = 0, cant = 0;
-//    uint16_t i = 0, limit = 0;
-//    uint8_t coils = 0, k = 0, new_data_count = 0, tempAdr = 0;
-//    uint8_t index = 0, offset = 0;
-//    uint16_t  parameters[20];
-//    uint8_t  byte_count;
-//    for ( i = 0; i < 4; i++ )
-//    {
-//        ascii[i] = ascii_frame[i + 5];
-//    }
-//    start = AsciiToTwoByte();
-//    for ( i = 0; i < 4; i++ )
-//    {
-//        ascii[i] = ascii_frame[i + 9];
-//    }
-//    cant = AsciiToTwoByte();
-//    limit = start + cant;
+
+    uint16_t i = 0;
+    uint8_t coils = 0, k = 0, new_data_count = 0, tempAdr = 0;
+    uint8_t index = 0, offset = 0;
+    uint16_t  parameters[20];
+    uint8_t  byte_count;
+
 //
-//    new_data_count = AsciiToByte(ascii_frame[13], ascii_frame[14] );
-//    data_count = 15;
+    new_data_count = AsciiToByte(ascii_frame[13], ascii_frame[14] );
+    data_count = 15;
 //
 //    /* read new coils values */
-//    byte_count = 0;
-//    for ( i = 0; i < new_data_count; i++ )
-//    {
-//        coils = AsciiToByte(ascii_frame[data_count], ascii_frame[data_count+1]);
-//        data_count += 2;
-//        parameters[byte_count++] = coils;
-//    }
+    byte_count = 0;
+    for ( i = 0; i < new_data_count; i++ )
+    {
+        coils = AsciiToByte(ascii_frame[data_count], ascii_frame[data_count+1]);
+        data_count += 2;
+        parameters[byte_count++] = coils;
+    }
 //
 //    /* force coils status */
-//    for ( i = start; i < limit; i++ )
-//    {
-//        tempAdr = i - start;
-//        index = tempAdr / 8;
-//        offset = tempAdr % 8;
-//        k = ( parameters[index] & ( 1 << offset ) );
-//        SetCoilValue(i, k > 0);    // force status of coil i with k
-//    }
-//    /* response frame */
-//    data_count = 13;
-//
-//    gen_lrc(buffer,size);
-//
-//    tx_ascii_frame(buffer,size);
-//    return;
+    for ( i = mb.start; i < mb.limit; i++ )
+    {
+        tempAdr = i - mb.start;
+        index = tempAdr / 8;
+        offset = tempAdr % 8;
+        k = ( parameters[index] & ( 1 << offset ) );
+        SetCoilValue(i, k > 0);    // force status of coil i with k
+    }
+
+
+    return 13;
 }
 
-void ResponsePresetMultipleRegisters_16(uint8_t *buffer, uint8_t size)   // 0x10, OK!!!
+uint8_t ResponsePresetMultipleRegisters_16(uint8_t *buffer, uint8_t size,Modbus_t mb)   // 0x10, OK!!!
 {
-//    uint16_t start = 0, cant = 0;
-//    uint16_t i = 0, limit = 0, reg_value = 0;
+
+    uint16_t i = 0,  reg_value = 0,sendIndex=0;
 //    signed char j = 0;
-//    uint8_t  byte_count;
-//    for ( i = 0; i < 4; i++ )
-//    {
-//        ascii[i] = ascii_frame[i + 5];
-//    }
+    uint8_t  byte_count;
+
 //    start = AsciiToTwoByte();
-//    for ( i = 0; i < 4; i++ )
-//    {
-//        ascii[i] = ascii_frame[i + 9];
-//    }
+
 //    cant = AsciiToTwoByte();
 //    limit = start + cant;
 //
-//    byte_count = AsciiToByte(ascii_frame[13], ascii_frame[14] );
-//    data_count = 15;
+    byte_count = AsciiToByte(ascii_frame[13], ascii_frame[14] );
+    sendIndex = 15;
 //
 //    /* read and set new holding registers values */
-//    byte_count /= 2;
-//    for ( i = 0; i < byte_count; i++ )
-//    {
-//        for ( j = 0; j < 4; j++ )
-//        {
-//            ascii[j] = ascii_frame[data_count++];
-//        }
-//        reg_value = AsciiToTwoByte();
-//        holding_registers_array[start++] = reg_value;
-//    }
-//
-//    data_count = 13;
-//
-//    gen_lrc(buffer,size);
-//
-//    tx_ascii_frame(buffer,size);
-//    return;
+    byte_count /= 2;
+
+
+    for ( i = 0; i < byte_count; i++ )
+    {
+        reg_value = AsciiToTwoByte(&buffer[sendIndex]);
+        SetHoldingRegisterValue_u16(mb.start++, reg_value);
+        sendIndex+=4;
+    }
+
+
+ return 13;
 }

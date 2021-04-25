@@ -18,18 +18,24 @@ union{
 	float f32_input_registers_array[MAX_INPUTS_REGISTERS/2];
 }inputRegister;
 
+
+
+
 uint8_t  coils_array[MAX_COILS];
 uint8_t  inputs_array[MAX_INPUTS];
 
-uint16_t  inputs_registers_array[MAX_INPUTS_REGISTERS];
+
 
 
 /* functions codes */
+
+
+
 /* coils read-write operations */
 uint8_t GetCoilValue(uint16_t adr)
 {
     uint8_t res = 0, i = 0, d = 0;
-    if ( adr < 0 || adr >= MAX_COILS * 8 )
+    if ( adr < 0 || adr > MAX_COILS * 8 )
     {
         return 0;
     } 
@@ -42,7 +48,7 @@ uint8_t GetCoilValue(uint16_t adr)
 void SetCoilValue(uint16_t adr, uint8_t value)
 {
     uint8_t res = 0, i = 0, d = 0;
-    if ( adr < 0 || adr >= MAX_COILS * 8 )
+    if ( adr < 0 || adr > MAX_COILS * 8 )
     {
         return ;
     }
@@ -73,7 +79,7 @@ void SetCoilValue(uint16_t adr, uint8_t value)
 /* holding registers read-write operations */
 uint16_t GetHoldingRegisterValue_u16(uint16_t adr)
 {
-    if ( adr < 0 || adr >= MAX_HOLDING_REGISTERS )
+    if ( adr < 0 || adr > MAX_HOLDING_REGISTERS )
     {
         return 0;   // invalid register address
     }
@@ -85,7 +91,7 @@ uint16_t GetHoldingRegisterValue_u16(uint16_t adr)
 
 int16_t GetHoldingRegisterValue_s16(uint16_t adr)
 {
-    if ( adr < 0 || adr >= MAX_HOLDING_REGISTERS )
+    if ( adr < 0 || adr > MAX_HOLDING_REGISTERS )
     {
         return 0;   // invalid register address
     }
@@ -99,19 +105,20 @@ int16_t GetHoldingRegisterValue_s16(uint16_t adr)
 
 uint32_t GetHoldingRegisterValue_u32(uint16_t adr)
 {
-    if ( adr < 0 || adr >= MAX_HOLDING_REGISTERS )
+    if ( adr < 0 || adr > MAX_HOLDING_REGISTERS )
     {
         return 0;   // invalid register address
     }
     else
     {
-        return holdingRegister.u32_holding_registers_array[adr];
+
+        return htonl(holdingRegister.u32_holding_registers_array[adr]);
     }
 }
 
 int32_t GetHoldingRegisterValue_s32(uint16_t adr)
 {
-    if ( adr < 0 || adr >= MAX_HOLDING_REGISTERS )
+    if ( adr < 0 || adr > MAX_HOLDING_REGISTERS )
     {
         return 0;   // invalid register address
     }
@@ -123,7 +130,7 @@ int32_t GetHoldingRegisterValue_s32(uint16_t adr)
 
 float GetHoldingRegisterValue_f32(uint16_t adr)
 {   
-    if ( adr < 0 || adr >= MAX_HOLDING_REGISTERS )
+    if ( adr < 0 || adr > MAX_HOLDING_REGISTERS )
     {
         return 0;   // invalid register address  
     }
@@ -136,43 +143,46 @@ float GetHoldingRegisterValue_f32(uint16_t adr)
 
 void SetHoldingRegisterValue_u16(uint16_t adr, uint16_t value)
 {
-    if ( adr < 0 || adr >= MAX_HOLDING_REGISTERS || value < 0 || value > 65535)
+    if ( adr < 0 || adr > MAX_HOLDING_REGISTERS || value < 0 || value > 65535)
     {
         return ;   // invalid register address  
     }
     else
     {
-    	holdingRegister.u16_holding_registers_array[adr] = value;
+    	holdingRegister.u16_holding_registers_array[adr-1] = value;
     }
 }
 
 void SetHoldingRegisterValue_s16(uint16_t adr, int16_t value)
 {
-    if ( adr < 0 || adr >= MAX_HOLDING_REGISTERS || value < 0 || value > 65535)
+    if ( adr < 0 || adr > MAX_HOLDING_REGISTERS )
     {
         return ;   // invalid register address
     }
     else
     {
-    	holdingRegister.s16_holding_registers_array[adr] = value;
+    	holdingRegister.s16_holding_registers_array[adr-1] = value;
     }
 }
 
 void SetHoldingRegisterValue_u32(uint16_t adr, uint32_t value)
 {
-    if ( adr < 0 || adr >= MAX_HOLDING_REGISTERS || value < 0 || value > 65535)
+
+    if ( adr < 0 || adr > MAX_HOLDING_REGISTERS || value < 0 )
     {
         return ;   // invalid register address
     }
     else
     {
+//    	holdingRegister.u16_holding_registers_array[adr*2+1]=(value&0xffff0000)>>16;
+//    	holdingRegister.u16_holding_registers_array[adr*2]=(value&0xffff);
     	holdingRegister.u32_holding_registers_array[adr] = value;
     }
 }
 
 void SetHoldingRegisterValue_s32(uint16_t adr, int32_t value)
 {
-    if ( adr < 0 || adr >= MAX_HOLDING_REGISTERS || value < 0 || value > 65535)
+    if ( adr < 0 || adr > MAX_HOLDING_REGISTERS )
     {
         return ;   // invalid register address
     }
@@ -184,7 +194,7 @@ void SetHoldingRegisterValue_s32(uint16_t adr, int32_t value)
 
 void SetHoldingRegisterValue_f32(uint16_t adr, float value)
 {
-    if ( adr < 0 || adr >= MAX_HOLDING_REGISTERS || value < 0 || value > 65535)
+    if ( adr < 0 || adr > MAX_HOLDING_REGISTERS )
     {
         return ;   // invalid register address
     }
@@ -194,11 +204,80 @@ void SetHoldingRegisterValue_f32(uint16_t adr, float value)
     }
 }
 
+
+//input
+
+
+
+uint16_t GetInputRegisterValue_u16(uint16_t adr)
+{
+    if ( adr < 0 || adr > MAX_INPUTS_REGISTERS )
+    {
+        return 0;   // invalid register address
+    }
+    else
+    {
+        return inputRegister.u16_input_registers_array[adr];
+    }
+}
+
+int16_t GetInputRegisterValue_s16(uint16_t adr)
+{
+    if ( adr < 0 || adr > MAX_INPUTS_REGISTERS )
+    {
+        return 0;   // invalid register address
+    }
+    else
+    {
+        return inputRegister.s16_input_registers_array[adr];
+    }
+}
+
+//care must be taken to pass correct address because it returns 32-bit unsigned
+
+uint32_t GetInputRegisterValue_u32(uint16_t adr)
+{
+    if ( adr < 0 || adr > MAX_INPUTS_REGISTERS )
+    {
+        return 0;   // invalid register address
+    }
+    else
+    {
+        return inputRegister.u32_input_registers_array[adr];
+    }
+}
+
+int32_t GetInputRegisterValue_s32(uint16_t adr)
+{
+    if ( adr < 0 || adr > MAX_INPUTS_REGISTERS )
+    {
+        return 0;   // invalid register address
+    }
+    else
+    {
+        return inputRegister.s32_input_registers_array[adr];
+    }
+}
+
+float GetInputRegisterValue_f32(uint16_t adr)
+{
+    if ( adr < 0 || adr > MAX_INPUTS_REGISTERS )
+    {
+        return 0;   // invalid register address
+    }
+    else
+    {
+        return inputRegister.f32_input_registers_array[adr];
+    }
+}
+
+
+
 /* inputs read-only operations */
 uint8_t GetInputValue(uint16_t adr)
 {    
     uint8_t res = 0, i = 0, d = 0;
-    if ( adr < 0 || adr >= MAX_INPUTS * 8 )
+    if ( adr < 0 || adr > MAX_INPUTS * 8 )
     {
         return 0;
     }
@@ -208,14 +287,65 @@ uint8_t GetInputValue(uint16_t adr)
     return res > 0;
 }
 
-uint16_t GetInputRegisterValue(uint16_t adr)
+
+void SetInputRegisterValue_u16(uint16_t adr, uint16_t value)
 {
-    if ( adr < 0 || adr >= MAX_INPUTS_REGISTERS )
+    if ( adr < 0 || adr > MAX_INPUTS_REGISTERS || value < 0 || value > 65535)
     {
-        return 0;   // invalid register address  
+        return ;   // invalid register address
     }
     else
-    {      
-        return inputs_registers_array[adr];
+    {
+    	inputRegister.u16_input_registers_array[adr-1] = value;
     }
 }
+
+void SetInputRegisterValue_s16(uint16_t adr, int16_t value)
+{
+    if ( adr < 0 || adr > MAX_INPUTS_REGISTERS )
+    {
+        return ;   // invalid register address
+    }
+    else
+    {
+    	inputRegister.s16_input_registers_array[adr-1] = value;
+    }
+}
+
+void SetInputRegisterValue_u32(uint16_t adr, uint32_t value)
+{
+
+    if ( adr < 0 || adr > MAX_INPUTS_REGISTERS || value < 0 )
+    {
+        return ;   // invalid register address
+    }
+    else
+    {
+    	inputRegister.u32_input_registers_array[adr] = value;
+    }
+}
+
+void SetInputRegisterValue_s32(uint16_t adr, int32_t value)
+{
+    if ( adr < 0 || adr > MAX_INPUTS_REGISTERS )
+    {
+        return ;   // invalid register address
+    }
+    else
+    {
+    	inputRegister.s32_input_registers_array[adr] = value;
+    }
+}
+
+void SetInputRegisterValue_f32(uint16_t adr, float value)
+{
+    if ( adr < 0 || adr > MAX_INPUTS_REGISTERS )
+    {
+        return ;   // invalid register address
+    }
+    else
+    {
+    	inputRegister.f32_input_registers_array[adr] = value;
+    }
+}
+

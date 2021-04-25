@@ -63,9 +63,10 @@ void ByteToAscii(uint16_t val,uint8_t* buffer,uint8_t noOfBytes)
 
 	while ( i < noOfBytes*2)
 	{
-		buffer[noOfBytes*2-i++]= NibbleToAscii(val % 16);
-		buffer[noOfBytes*2-i++] =NibbleToAscii(val / 16);
-		val /= 256;
+		buffer[noOfBytes*2-i++]= NibbleToAscii((val % 16));
+		val /= 16;
+		buffer[noOfBytes*2-i++] =NibbleToAscii((val % 16));
+		val /= 16;
 	}
 
 	return ;

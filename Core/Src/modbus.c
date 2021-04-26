@@ -216,7 +216,7 @@ uint8_t ResponseReadInputStatus_02(uint8_t *buffer, uint8_t size, Modbus_t mb) /
         inputs = 0;
         while (k < 8 && i + k < mb.limit)
         {
-            uint8_t val = GetInputRegisterValue_u16(i + k); // status of input i+k
+            uint8_t val = GetInputStatusValue(i + k); // status of input i+k
             if (val == 1)                                   //input active
             {
                 inputs |= (1 << k);

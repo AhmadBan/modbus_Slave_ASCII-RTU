@@ -72,6 +72,54 @@ void SetCoilValue(uint16_t adr, uint8_t value)
     return;
 }
 
+uint8_t GetInputStatusValue(uint16_t adr)
+{
+    uint8_t res = 0, i = 0, d = 0;
+    if (adr < 0 || adr > MAX_COILS * 8)
+    {
+        return 0;
+    }
+    i = adr / 8;
+    d = adr % 8;
+    res = (inputs_array[i] & (1 << d));
+    return res > 0;
+}
+
+void SetInputStatusValue(uint16_t adr, uint8_t value)
+{
+    uint8_t res = 0, i = 0, d = 0;
+    if (adr < 0 || adr > MAX_COILS * 8)
+    {
+        return;
+    }
+    i = adr / 8;
+    d = adr % 8;
+    res = (inputs_array[i] & (1 << d));
+    if (res > 0)
+    {
+        res = 1; //coil on
+    }
+    else
+    {
+        res = 0; //coil off
+    }
+    if (res == 1 && value == 1)
+        return; // already ON
+    if (res == 0 && value == 0)
+        return;                 // already OFF
+    if (res == 0 && value == 1) // is off turn on
+    {
+    	inputs_array[i] = (inputs_array[i] | (1 << d)); // active coil
+    }
+    if (res == 1 && value == 0) // is on turn off
+    {
+    	inputs_array[i] = (inputs_array[i] & (~(1 << d))); // desactive coil
+    }
+    return;
+}
+
+
+
 /* holding registers read-write operations */
 
 uint16_t GetHoldingRegisterValue_u16_driver(uint16_t adr)

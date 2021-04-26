@@ -11,6 +11,8 @@
 extern uint16_t holding_registers_array[MAX_HOLDING_REGISTERS];
 
 /* functions prototypes */
+uint8_t GetInputStatusValue(uint16_t adr);
+void SetInputStatusValue(uint16_t adr, uint8_t value);
 uint8_t GetCoilValue(uint16_t adr);
 void SetCoilValue(uint16_t adr, uint8_t value);
 //Get Holding Registers

@@ -134,7 +134,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    SetHoldingRegisterValue_u32(24, GetHoldingRegisterValue_u32(10));
+    //SetHoldingRegisterValue_u32(24, GetHoldingRegisterValue_u32(10));
     HAL_Delay(100);
     /* USER CODE END WHILE */
 

@@ -41,16 +41,19 @@ uint8_t NibbleToAscii(uint8_t val)
 	}
 }
 
-//void ByteToAscii(uint8_t val,uint8_t* buffer)
-//{
-//	uint8_t a = val / 16;
-//	uint8_t b = val % 16;
-//	buffer[0]= NibbleToAscii(a);
-//	buffer[1] =NibbleToAscii(b);
-//	return ;
-//}
-//
-void ByteToAscii(uint16_t val, uint8_t *buffer, uint8_t noOfBytes)
+void ByteToAscii(uint8_t val,uint8_t* buffer)
+{
+	uint8_t a = val / 16;
+	uint8_t b = val % 16;
+	buffer[0]= NibbleToAscii(a);
+	buffer[1] =NibbleToAscii(b);
+	return ;
+}
+
+
+
+
+void twoByteToAscii(uint16_t val, uint8_t *buffer, uint8_t noOfBytes)
 {
 
 	uint8_t i = 1;

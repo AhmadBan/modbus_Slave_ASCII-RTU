@@ -6,40 +6,92 @@ uint8_t data_count = 0;
 uint8_t send_count = 0;
 uint8_t broadcast = 0;
 uint8_t sendBuffer[ASCII_FRAME_SIZE];
+uint8_t numericBuffer[ASCII_FRAME_SIZE/2];
 struct
 {
     ModbusFuncCode_t mbFunc;
 } mbState[17];
 
-/* functions prototypes*/
-static uint8_t convert(uint8_t *value, uint8_t size)
+/***********************************************************
+* Function name: convert2ASCII(uint8_t *byteArgIn, uint8_t size,uint8_t asciiArgOut)
+* Description: convert a buffer of uint8_t stream into a buffer of ASCII code, byte and ascii must not be NULL pointer
+* Parameter byteArgIn : A pointer stream of bytes as an input
+* Parameter size : size of byteArgIn that needs to be converted
+* Parameter asciiArgOut : A pointer to stream of ASCII bytes that will be used to save converted data
+* Return value: size of asciiArgout buffer
+* Remarks:None
+***********************************************************/
+static uint8_t convert2ASCII(uint8_t *byteArgIn, uint8_t size,uint8_t* asciiArgOut)
 {
 #ifdef ASCII
+	uint8_t i=0;
+	gen_lrc(byteArgIn, size);
+	asciiArgOut[0]=':';
+	for(i=0;i<size+1;i++){
+		ByteToAscii(byteArgIn[i],&sendBuffer[2*i+1]);
+	}
+	asciiArgOut[2*size+3]=CR;
+	asciiArgOut[2*size+4]=LF;
 
 
-    gen_lrc(sendBuffer, size);
-    size += 4;
+
 #elif RTU
 
 
 #endif
 
-    return size;
+    return 2*size+5;
 }
+
+/***********************************************************
+* Function name: convert2Byte(uint8_t *asciiArgIn, uint8_t size,uint8_t *byteArgOut)
+* Description: convert a buffer of ASCII code into a buffer of uint8_t stream, byte and ascii must not be NULL pointer
+* Parameter asciiArgIn : A pointer to stream of ASCII bytes as an input
+* Parameter size : size of asciiArgIn that needs to be converted
+* Parameter byteArgOut : A pointer to stream of bytes that will be used to save converted data
+* Return value: 1 if success 0 if failed
+* Remarks:byteArgOut must be large enough so that fucntion not write out of allocated area
+***********************************************************/
+static uint8_t convert2Byte(uint8_t *asciiArgIn, uint8_t size,uint8_t *byteArgOut)
+{
+	if((byteArgOut==NULL)||(asciiArgIn==NULL)){
+		return 0;
+	}
+#ifdef ASCII
+	uint8_t i=0;
+		for(i=1;i<size;i+=2){
+			byteArgOut[i/2]=AsciiToByte(asciiArgIn[i], asciiArgIn[i+1]);
+		}
+
+
+#endif
+
+    return 1;
+}
+
+/***********************************************************
+* Function name: getModbusInfo(uint8_t *buffer, uint8_t size)
+* Description: get the info such as start, quantity from a received packet
+* Parameter buffer : A pointer to stream of received buffer as an input
+* Parameter size : size of buffer sent to function
+* Return value: a Modbus_t variable that contains extracted info
+* Remarks:None
+***********************************************************/
 static Modbus_t getModbusInfo(uint8_t *buffer, uint8_t size)
 {
     Modbus_t mb = {0};
 
-    mb.start = AsciiToTwoByte(&buffer[5]);
-    mb.quantity = AsciiToTwoByte(&buffer[9]);
+    mb.start = buffer[2]*256+buffer[3];
+    mb.quantity =  buffer[4]*256+buffer[5];
     mb.limit = mb.start + mb.quantity;
+    mb.code=buffer[1];
     return mb;
 }
 static uint8_t checkLRCCorrect(uint8_t *buffer, uint8_t size)
 {
     uint8_t lrc = 0;
-    lrc = AsciiToByte(buffer[size - 4], buffer[size - 3]);
-    if (lrc_calc(buffer, size - 4) != lrc)
+
+    if (lrc_calc(buffer, size-2) !=buffer[size-2] )
     {
         //clear_frame(buffer); // bad LRC, frame discard
         return 0;
@@ -47,11 +99,17 @@ static uint8_t checkLRCCorrect(uint8_t *buffer, uint8_t size)
     return 1;
 }
 
+static uint8_t checkCRCCorrect(uint8_t *buffer, uint8_t size)
+{
+
+    return 1;
+}
+
 static uint8_t checkAddressCorrect(uint8_t *buffer, uint8_t size)
 {
     uint8_t is_me = 0;
     /*   frame ok  */
-    is_me = AsciiToByte(buffer[1], buffer[2]);
+    is_me = buffer[0];
     if (is_me == 0)
     {
         broadcast = 1;
@@ -70,7 +128,7 @@ static uint8_t checkAddressCorrect(uint8_t *buffer, uint8_t size)
 void initModbus(void)
 {
     //register response function pointer to modbus state array in order to map function code to appropriate function
-	mbState[1].mbFunc = ResponseReadCoilsStatus_01;
+	mbState[1].mbFunc = ResponseReadCoilsStatus_01_e;
 	mbState[2].mbFunc = ResponseReadInputStatus_02;
 	mbState[3].mbFunc = ResponseReadHoldingRegisters_03;
 	mbState[4].mbFunc = ResponseReadInputRegisters_04;
@@ -82,11 +140,21 @@ void initModbus(void)
 
 uint8_t execute_modbus_command(uint8_t *buffer, uint8_t size)
 {
-
     uint8_t sendIndex;
     Modbus_t mb;
+    uint8_t numericSize;
 
-    uint8_t  fun = 0;
+#ifdef ASCII
+    if(!convert2Byte(buffer,size,numericBuffer)){
+    	//input array is NULL. please allocate memory for input
+    	while(1);
+    }
+    numericSize=(size-1)/2;
+    if (!checkLRCCorrect(numericBuffer, numericSize))
+       {
+           //not LRC correct
+           return 0;
+       }
 
     if (size < 9)
     {
@@ -94,32 +162,32 @@ uint8_t execute_modbus_command(uint8_t *buffer, uint8_t size)
         return 0;
     }
 
-    if (!checkLRCCorrect(buffer, size))
-    {
-        //not LRC correct
-        return 0;
+    #elif RTU
+
+    if (!checkCRCCorrect(numericBuffer, size)){
+    	return 0;
     }
-    size -= 4;
+#endif
+
+
+
+
+
+
     /*   frame ok  */
-    if (!checkAddressCorrect(buffer, size))
+    if (!checkAddressCorrect(numericBuffer, numericSize))
     {
         //Not this device address
         return 0;
     }
 
-    mb = getModbusInfo(buffer, size);
-    // response buffer start(1)+address(2)+protocol(2)
-    for (sendIndex = 0; sendIndex < 5; sendIndex++)
-    {
-        sendBuffer[sendIndex] = buffer[sendIndex]; //copy request header to response header
-    }
-    //calculate function code
-    fun = AsciiToByte(buffer[3], buffer[4]);
+    mb = getModbusInfo(numericBuffer, numericSize);
 
-    //call function code
-    sendIndex = mbState[fun].mbFunc(buffer, size, mb);
+    //call function code]
+    if(mbState[mb.code].mbFunc!=NULL)
+    	sendIndex = mbState[mb.code].mbFunc(numericBuffer, numericSize, mb);
 
-    sendIndex=convert(sendBuffer,sendIndex);
+    sendIndex=convert2ASCII(numericBuffer,sendIndex,sendBuffer);
 
 
     //transfer send buffer asynchronously by DMA
@@ -129,11 +197,7 @@ uint8_t execute_modbus_command(uint8_t *buffer, uint8_t size)
 
 void gen_lrc(uint8_t *buffer, uint8_t size)
 {
-    ByteToAscii(lrc_calc(buffer, size), &buffer[size], 1);
-    size += 2;
-
-    buffer[size++] = CR;
-    buffer[size++] = LF;
+    buffer[size]=lrc_calc(buffer, size);
 }
 void clear_frame(uint8_t *buffer)
 {
@@ -158,9 +222,9 @@ void tx_ascii_frame(uint8_t *buffer, uint8_t size)
 uint8_t lrc_calc(uint8_t *buffer, uint8_t size)
 {
     uint8_t result = 0, i = 0;
-    for (i = 1; i < size; i += 2)
+    for (i = 0; i < size; i++)
     {
-        result += AsciiToByte(buffer[i], buffer[i + 1]);
+        result += buffer[i];
     }
     result = ~result;
     return (result + 1);
@@ -179,10 +243,10 @@ uint8_t lrc_calc(uint8_t *buffer, uint8_t size)
  */
 
 /* function codes */
-uint8_t ResponseReadCoilsStatus_01(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x01, OK
+uint8_t ResponseReadCoilsStatus_01_e(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x01, OK
 {
 
-    uint8_t sendIndex = 7, newDataCount = 0, i, k, inputs; //update index to add data
+    uint8_t  newDataCount = 0, i, k, inputs; //update index to add data
 
     /* querying inputs status */
     for (i = mb.start; i < mb.limit; i += 8)
@@ -198,16 +262,17 @@ uint8_t ResponseReadCoilsStatus_01(uint8_t *buffer, uint8_t size, Modbus_t mb) /
             }
             k++;
         }
-        ByteToAscii(inputs, &sendBuffer[sendIndex], 1); //change data to ASCII and filling send buffer correspondingly
-        sendIndex += 2;
+        numericBuffer[newDataCount+3]=inputs;//
         newDataCount++;
     }
-    ByteToAscii(newDataCount, &sendBuffer[5], 1);
-    return sendIndex;
+    numericBuffer[2]=newDataCount;//
+
+    //ByteToAscii(newDataCount, &sendBuffer[5], 1);
+    return 3+newDataCount;
 }
 uint8_t ResponseReadInputStatus_02(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x02, OK!!!
 {
-    uint8_t sendIndex = 7, newDataCount = 0, i, k, inputs; //update index to add data
+    uint8_t newDataCount = 0, i, k, inputs; //update index to add data
 
     /* querying inputs status */
     for (i = mb.start; i < mb.limit; i += 8)
@@ -223,149 +288,149 @@ uint8_t ResponseReadInputStatus_02(uint8_t *buffer, uint8_t size, Modbus_t mb) /
             }
             k++;
         }
-        ByteToAscii(inputs, &sendBuffer[sendIndex], 1); //change data to ASCII and filling send buffer correspondingly
-        sendIndex += 2;
+        numericBuffer[newDataCount+3]=inputs;//
         newDataCount++;
+
     }
-    ByteToAscii(newDataCount, &sendBuffer[5], 1);
-    return sendIndex;
+    numericBuffer[2]=newDataCount;//
+    return 3+newDataCount;
 }
 
 uint16_t counter = 1;
 uint8_t ResponseReadHoldingRegisters_03(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x03, OK!!!
 {
-    uint8_t sendIndex = 7; //update index to add data
-    uint16_t status = 0;
-    //length of data in bytes= (quantity - offset)*2 put length of bytes in 5th byte
-    ByteToAscii((mb.limit - mb.start) * 2, &sendBuffer[5], 1);
-
-    /* querying holding registers status */
-    for (int i = mb.start; i < mb.limit; i++)
-    {
-        //implement here what is needed to get holding registers
-        status = GetHoldingRegisterValue_u16_driver(i); //put counter here for test
-
-        ByteToAscii(status, &sendBuffer[sendIndex], 2); //change data to ASCII and filling send buffer correspondingly
-        sendIndex += 4;                                 //every two bytes of data require 4 byte ASCII code
-    }
-    return sendIndex;
+//    uint8_t sendIndex = 7; //update index to add data
+//    uint16_t status = 0;
+//    //length of data in bytes= (quantity - offset)*2 put length of bytes in 5th byte
+////>    ByteToAscii((mb.limit - mb.start) * 2, &sendBuffer[5], 1);
+//
+//    /* querying holding registers status */
+//    for (int i = mb.start; i < mb.limit; i++)
+//    {
+//        //implement here what is needed to get holding registers
+//        status = GetHoldingRegisterValue_u16_driver(i); //put counter here for test
+//
+//        //>       ByteToAscii(status, &sendBuffer[sendIndex], 2); //change data to ASCII and filling send buffer correspondingly
+//        sendIndex += 4;                                 //every two bytes of data require 4 byte ASCII code
+//    }
+//    return sendIndex;
 }
 uint8_t ResponseReadInputRegisters_04(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x04,  OK!!!!
 {
-    uint8_t sendIndex = 7; //update index to add data
-    uint16_t status = 0;
-    //length of data in bytes= (quantity - offset)*2 put length of bytes in 5th byte
-    ByteToAscii((mb.limit - mb.start) * 2, &sendBuffer[5], 1);
-
-    /* querying holding registers status */
-    for (int i = mb.start; i < mb.limit; i++)
-    {
-        //implement here what is needed to get holding registers
-        status = GetInputRegisterValue_u16_driver(i);   //put counter here for test
-        ByteToAscii(status, &sendBuffer[sendIndex], 2); //change data to ASCII and filling send buffer correspondingly
-        sendIndex += 4;                                 //every two bytes of data require 4 byte ASCII code
-    }
-    return sendIndex;
+//    uint8_t sendIndex = 7; //update index to add data
+//    uint16_t status = 0;
+//    //length of data in bytes= (quantity - offset)*2 put length of bytes in 5th byte
+//    //>    ByteToAscii((mb.limit - mb.start) * 2, &sendBuffer[5], 1);
+//
+//    /* querying holding registers status */
+//    for (int i = mb.start; i < mb.limit; i++)
+//    {
+//        //implement here what is needed to get holding registers
+//        status = GetInputRegisterValue_u16_driver(i);   //put counter here for test
+//        //>        ByteToAscii(status, &sendBuffer[sendIndex], 2); //change data to ASCII and filling send buffer correspondingly
+//        sendIndex += 4;                                 //every two bytes of data require 4 byte ASCII code
+//    }
+//    return sendIndex;
 }
 uint8_t ResponseForceSingleCoil_05(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x05, OK!!!!
 {
-    uint16_t coilID = 0;
-    uint16_t value = 0;
-
-    coilID = mb.start; //coil index
-
-    value = mb.quantity; //coil value
-    if (value == 0 || value == 65280)   // 0 or 1, 0000h or FF00h
-    {
-        SetCoilValue(coilID, value > 0);
-    }
-    for (int i = 5; i < 13; i++)
-    {
-        sendBuffer[i] = buffer[i];
-    }
-
-    return 13;
+//    uint16_t coilID = 0;
+//    uint16_t value = 0;
+//
+//    coilID = mb.start; //coil index
+//
+//    value = mb.quantity; //coil value
+//    if (value == 0 || value == 65280)   // 0 or 1, 0000h or FF00h
+//    {
+//        SetCoilValue(coilID, value > 0);
+//    }
+//    for (int i = 5; i < 13; i++)
+//    {
+//        sendBuffer[i] = buffer[i];
+//    }
+//
+//    return 13;
 }
 
 uint8_t ResponsePresetSingleRegister_06(uint8_t *buffer, uint8_t size, Modbus_t mb) //0x06, OK!!!!
 {
-    uint16_t registerID = 0;
-    uint16_t value = 0;
-
-    registerID = mb.start; //register index
-
-    value = mb.quantity; //register value
-    SetHoldingRegisterValue_u16_driver(registerID, value);
-    for (int i = 5; i < 13; i++)
-    {
-        sendBuffer[i] = buffer[i];
-    }
-
-    return 13;
+//    uint16_t registerID = 0;
+//    uint16_t value = 0;
+//
+//    registerID = mb.start; //register index
+//
+//    value = mb.quantity; //register value
+//    SetHoldingRegisterValue_u16_driver(registerID, value);
+//    for (int i = 5; i < 13; i++)
+//    {
+//        sendBuffer[i] = buffer[i];
+//    }
+//
+//    return 13;
 }
 
 uint8_t ResponseForceMultipleCoils_15(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x0F, OK
 {
 
-    uint16_t i = 0;
-    uint8_t coils = 0, k = 0, new_data_count = 0, tempAdr = 0;
-    uint8_t index = 0, offset = 0;
-    uint16_t parameters[20];
-    uint8_t byte_count;
-
-    //
-    new_data_count = AsciiToByte(ascii_frame[13], ascii_frame[14]);
-    data_count = 15;
-    //
-    //    /* read new coils values */
-    byte_count = 0;
-    for (i = 0; i < new_data_count; i++)
-    {
-        coils = AsciiToByte(ascii_frame[data_count], ascii_frame[data_count + 1]);
-        data_count += 2;
-        parameters[byte_count++] = coils;
-    }
-    //
-    //    /* force coils status */
-    for (i = mb.start; i < mb.limit; i++)
-    {
-        tempAdr = i - mb.start;
-        index = tempAdr / 8;
-        offset = tempAdr % 8;
-        k = (parameters[index] & (1 << offset));
-        SetCoilValue(i, k > 0); // force status of coil i with k
-    }
-
-    return 13;
+//    uint16_t i = 0;
+//    uint8_t coils = 0, k = 0, new_data_count = 0, tempAdr = 0;
+//    uint8_t index = 0, offset = 0;
+//    uint16_t parameters[20];
+//    uint8_t byte_count;
+//
+//    //
+//    new_data_count = AsciiToByte(ascii_frame[13], ascii_frame[14]);
+//    data_count = 15;
+//    //
+//    //    /* read new coils values */
+//    byte_count = 0;
+//    for (i = 0; i < new_data_count; i++)
+//    {
+//        coils = AsciiToByte(ascii_frame[data_count], ascii_frame[data_count + 1]);
+//        data_count += 2;
+//        parameters[byte_count++] = coils;
+//    }
+//    //
+//    //    /* force coils status */
+//    for (i = mb.start; i < mb.limit; i++)
+//    {
+//        tempAdr = i - mb.start;
+//        index = tempAdr / 8;
+//        offset = tempAdr % 8;
+//        k = (parameters[index] & (1 << offset));
+//        SetCoilValue(i, k > 0); // force status of coil i with k
+//    }
+//
+//    return 13;
 }
 
 uint8_t ResponsePresetMultipleRegisters_16(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x10, OK!!!
 {
 
-    uint16_t i = 0, reg_value = 0, sendIndex = 0;
-    //    signed char j = 0;
-    uint8_t byte_count;
-
-    //    start = AsciiToTwoByte();
-
-    //    cant = AsciiToTwoByte();
-    //    limit = start + cant;
-    //
-    byte_count = AsciiToByte(buffer[13], buffer[14]);
-    sendIndex = 15;
-    for (i = 5; i < 13; i++)
-    {
-        sendBuffer[i] = buffer[i];
-    }
-    //    /* read and set new holding registers values */
-    byte_count /= 2;
-
-    for (i = 0; i < byte_count; i++)
-    {
-        reg_value = AsciiToTwoByte(&buffer[sendIndex]);
-        SetHoldingRegisterValue_u16_driver(mb.start++, reg_value);
-        sendIndex += 4;
-    }
-
-    return 13;
+//    uint16_t i = 0, reg_value = 0, sendIndex = 0;
+//    //    signed char j = 0;
+//    uint8_t byte_count;
+//
+//    //    start = AsciiToTwoByte();
+//
+//    //    cant = AsciiToTwoByte();
+//    //    limit = start + cant;
+//    //
+//    byte_count = AsciiToByte(buffer[13], buffer[14]);
+//    sendIndex = 15;
+//    for (i = 5; i < 13; i++)
+//    {
+//        sendBuffer[i] = buffer[i];
+//    }
+//    //    /* read and set new holding registers values */
+//    byte_count /= 2;
+//
+//    for (i = 0; i < byte_count; i++)
+//    {
+//        reg_value = AsciiToTwoByte(&buffer[sendIndex]);
+//        SetHoldingRegisterValue_u16_driver(mb.start++, reg_value);
+//        sendIndex += 4;
+//    }
+//
+//    return 13;
 }

@@ -9,10 +9,11 @@ uint16_t AsciiToTwoByte(uint8_t *ascii);
 
 /* functions code */
 
-void ByteToAscii(uint16_t val,uint8_t* buffer,uint8_t noOfBytes);
+void ByteToAscii(uint8_t val,uint8_t* buffer);
 uint8_t NibbleToAscii(uint8_t val);
 
 uint8_t AsciiToByte(uint8_t a, uint8_t b);
 
+void twoByteToAscii(uint16_t val, uint8_t *buffer, uint8_t noOfBytes);
 //void TwoByteToAscii(uint16_t val,uint8_t* buffer);
 uint16_t AsciiToTwoByte();

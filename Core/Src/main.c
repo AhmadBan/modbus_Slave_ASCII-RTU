@@ -50,23 +50,24 @@
 /* USER CODE BEGIN PV */
 
 uint8_t mbBuffer[ASCII_FRAME_SIZE];
-extern union{
-	uint16_t  u16_holding_registers_array[MAX_HOLDING_REGISTERS];
-	int16_t s16_holding_registers_array[MAX_HOLDING_REGISTERS];
-	uint32_t u32_holding_registers_array[MAX_HOLDING_REGISTERS/2];
-	int32_t s32_holding_registers_array[MAX_HOLDING_REGISTERS/2];
-	float f32_holding_registers_array[MAX_HOLDING_REGISTERS/2];
+extern union
+{
+  uint16_t u16_holding_registers_array[MAX_HOLDING_REGISTERS];
+  int16_t s16_holding_registers_array[MAX_HOLDING_REGISTERS];
+  uint32_t u32_holding_registers_array[MAX_HOLDING_REGISTERS / 2];
+  int32_t s32_holding_registers_array[MAX_HOLDING_REGISTERS / 2];
+  float f32_holding_registers_array[MAX_HOLDING_REGISTERS / 2];
 
-}holdingRegister;
+} holdingRegister;
 
-extern union{
-	uint16_t  u16_input_registers_array[MAX_INPUTS_REGISTERS];
-	int16_t s16_input_registers_array[MAX_INPUTS_REGISTERS];
-	uint32_t u32_input_registers_array[MAX_INPUTS_REGISTERS/2];
-	int32_t s32_input_registers_array[MAX_INPUTS_REGISTERS/2];
-	float f32_input_registers_array[MAX_INPUTS_REGISTERS/2];
-}inputRegister;
-
+extern union
+{
+  uint16_t u16_input_registers_array[MAX_INPUTS_REGISTERS];
+  int16_t s16_input_registers_array[MAX_INPUTS_REGISTERS];
+  uint32_t u32_input_registers_array[MAX_INPUTS_REGISTERS / 2];
+  int32_t s32_input_registers_array[MAX_INPUTS_REGISTERS / 2];
+  float f32_input_registers_array[MAX_INPUTS_REGISTERS / 2];
+} inputRegister;
 
 /* USER CODE END PV */
 
@@ -115,30 +116,29 @@ int main(void)
   /* USER CODE BEGIN 2 */
   //HAL_UART_Receive_IT(&huart1, &rx, 1);
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
-  SetHoldingRegisterValue_s16(50,-9999);
-  SetHoldingRegisterValue_u16(1,9998);
-  SetHoldingRegisterValue_u32(10,66888);
-  SetHoldingRegisterValue_s32(11,-66888);
-  SetHoldingRegisterValue_f32(12,10.2134f);
+  SetHoldingRegisterValue_s16(50, -9999);
+  SetHoldingRegisterValue_u16(1, 9998);
+  SetHoldingRegisterValue_u32(10, 66888);
+  SetHoldingRegisterValue_s32(11, -66888);
+  SetHoldingRegisterValue_f32(12, 10.2134f);
 
-
-  SetInputRegisterValue_s16(17,-9999);
-  SetInputRegisterValue_u16(12,9998);
-  SetInputRegisterValue_u32(20,66888);
-  SetInputRegisterValue_s32(19,-66888);
-  SetInputRegisterValue_f32(15,10.2134f);
+  SetInputRegisterValue_s16(17, -9999);
+  SetInputRegisterValue_u16(12, 9998);
+  SetInputRegisterValue_u32(20, 66888);
+  SetInputRegisterValue_s32(19, -66888);
+  SetInputRegisterValue_f32(15, 10.2134f);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	while (1)
-	{
-
-		 HAL_Delay(100);
+  while (1)
+  {
+    SetHoldingRegisterValue_u32(24, GetHoldingRegisterValue_u32(10));
+    HAL_Delay(100);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	}
+  }
   /* USER CODE END 3 */
 }
 
@@ -168,8 +168,7 @@ void SystemClock_Config(void)
   }
   /** Initializes the CPU, AHB and APB buses clocks
   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
@@ -188,17 +187,16 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
 
-	execute_modbus_command(mbBuffer,Size);
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
+  execute_modbus_command(mbBuffer, Size);
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
 }
-
-
 
 /* USER CODE END 4 */
 
- /**
+/**
   * @brief  Period elapsed callback in non blocking mode
   * @note   This function is called  when TIM3 interrupt took place, inside
   * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
@@ -211,7 +209,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM3) {
+  if (htim->Instance == TIM3)
+  {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
@@ -226,15 +225,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-	/* User can add his own implementation to report the HAL error return state */
-	__disable_irq();
-	while (1)
-	{
-	}
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1)
+  {
+  }
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
@@ -245,7 +244,7 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-	/* User can add his own implementation to report the file name and line number,
+  /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }

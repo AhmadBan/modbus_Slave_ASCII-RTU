@@ -114,7 +114,8 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
-  //HAL_UART_Receive_IT(&huart1, &rx, 1);
+
+  initModbus();
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
   SetHoldingRegisterValue_s16(50, -9999);
   SetHoldingRegisterValue_u16(1, 9998);

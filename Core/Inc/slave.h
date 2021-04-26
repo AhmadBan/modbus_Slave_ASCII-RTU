@@ -21,6 +21,7 @@ uint32_t GetHoldingRegisterValue_u32(uint16_t adr);
 int32_t GetHoldingRegisterValue_s32(uint16_t adr);
 float GetHoldingRegisterValue_f32(uint16_t adr);
 //Set Holding Registers
+void SetHoldingRegisterValue_u16_driver(uint16_t adr, uint16_t value);
 void SetHoldingRegisterValue_u16(uint16_t adr, uint16_t value);
 void SetHoldingRegisterValue_s16(uint16_t adr, int16_t value);
 void SetHoldingRegisterValue_u32(uint16_t adr, uint32_t value);

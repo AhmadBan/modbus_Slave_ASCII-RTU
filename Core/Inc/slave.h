@@ -3,8 +3,8 @@
 #define DIR 0x01 //slave dir 5
 /* data range */
 
-#define MAX_COILS 1
-#define MAX_INPUTS 1
+#define MAX_COILS 10
+#define MAX_INPUTS 10
 #define MAX_HOLDING_REGISTERS 50 //must be multiple 2 bacause it is used to save 4-byte variables
 #define MAX_INPUTS_REGISTERS 50
 

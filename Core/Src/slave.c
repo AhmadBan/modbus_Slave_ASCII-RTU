@@ -72,6 +72,10 @@ void SetCoilValue(uint16_t adr, uint8_t value)
     return;
 }
 
+void setCoilMulti(uint8_t address,uint8_t value){
+	//d
+}
+
 uint8_t GetInputStatusValue(uint16_t adr)
 {
     uint8_t res = 0, i = 0, d = 0;

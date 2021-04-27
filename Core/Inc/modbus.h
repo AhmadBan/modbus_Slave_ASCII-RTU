@@ -10,7 +10,7 @@
 #define CR 0x0D
 #define LF 0x0A
 
-#define ASCII
+#define RTU
 typedef struct
 {
 	uint16_t start;

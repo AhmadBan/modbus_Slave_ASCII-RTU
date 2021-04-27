@@ -128,7 +128,7 @@ static uint8_t checkAddressCorrect(uint8_t *buffer, uint8_t size)
 void initModbus(void)
 {
     //register response function pointer to modbus state array in order to map function code to appropriate function
-	mbState[1].mbFunc = ResponseReadCoilsStatus_01_e;
+	mbState[1].mbFunc = ResponseReadCoilsStatus_01;
 	mbState[2].mbFunc = ResponseReadInputStatus_02;
 	mbState[3].mbFunc = ResponseReadHoldingRegisters_03;
 	mbState[4].mbFunc = ResponseReadInputRegisters_04;
@@ -243,7 +243,7 @@ uint8_t lrc_calc(uint8_t *buffer, uint8_t size)
  */
 
 /* function codes */
-uint8_t ResponseReadCoilsStatus_01_e(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x01, OK
+uint8_t ResponseReadCoilsStatus_01(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x01, OK
 {
 
     uint8_t  newDataCount = 0, i, k, inputs; //update index to add data
@@ -299,138 +299,139 @@ uint8_t ResponseReadInputStatus_02(uint8_t *buffer, uint8_t size, Modbus_t mb) /
 uint16_t counter = 1;
 uint8_t ResponseReadHoldingRegisters_03(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x03, OK!!!
 {
-//    uint8_t sendIndex = 7; //update index to add data
-//    uint16_t status = 0;
-//    //length of data in bytes= (quantity - offset)*2 put length of bytes in 5th byte
-////>    ByteToAscii((mb.limit - mb.start) * 2, &sendBuffer[5], 1);
-//
-//    /* querying holding registers status */
-//    for (int i = mb.start; i < mb.limit; i++)
-//    {
-//        //implement here what is needed to get holding registers
-//        status = GetHoldingRegisterValue_u16_driver(i); //put counter here for test
-//
-//        //>       ByteToAscii(status, &sendBuffer[sendIndex], 2); //change data to ASCII and filling send buffer correspondingly
-//        sendIndex += 4;                                 //every two bytes of data require 4 byte ASCII code
-//    }
-//    return sendIndex;
+	union{
+    uint16_t val ;
+    uint8_t buff[2];
+	}data;
+	uint8_t dataCount=0;
+   // ByteToAscii(, &sendBuffer[5], 1);
+    buffer[2]=(mb.limit - mb.start) * 2;
+    /* querying holding registers status */
+    for (int i = mb.start; i < mb.limit; i++)
+    {
+        //implement here what is needed to get holding registers
+        data.val = GetHoldingRegisterValue_u16_driver(i); //put counter here for test
+        buffer[3+dataCount*2]=data.buff[1];
+        buffer[3+dataCount*2+1]=data.buff[0];
+        dataCount++;
+    }
+    buffer[2]=dataCount*2;
+    return dataCount*2+3;
 }
 uint8_t ResponseReadInputRegisters_04(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x04,  OK!!!!
 {
-//    uint8_t sendIndex = 7; //update index to add data
-//    uint16_t status = 0;
-//    //length of data in bytes= (quantity - offset)*2 put length of bytes in 5th byte
-//    //>    ByteToAscii((mb.limit - mb.start) * 2, &sendBuffer[5], 1);
-//
-//    /* querying holding registers status */
-//    for (int i = mb.start; i < mb.limit; i++)
-//    {
-//        //implement here what is needed to get holding registers
-//        status = GetInputRegisterValue_u16_driver(i);   //put counter here for test
-//        //>        ByteToAscii(status, &sendBuffer[sendIndex], 2); //change data to ASCII and filling send buffer correspondingly
-//        sendIndex += 4;                                 //every two bytes of data require 4 byte ASCII code
-//    }
-//    return sendIndex;
+
+	union{
+	    uint16_t val ;
+	    uint8_t buff[2];
+		}data;
+		uint8_t dataCount=0;
+	   // ByteToAscii(, &sendBuffer[5], 1);
+	    buffer[2]=(mb.limit - mb.start) * 2;
+	    /* querying holding registers status */
+	    for (int i = mb.start; i < mb.limit; i++)
+	    {
+	        //implement here what is needed to get holding registers
+	        data.val = GetInputRegisterValue_u16_driver(i); //put counter here for test
+	        buffer[3+dataCount*2]=data.buff[1];
+	        buffer[3+dataCount*2+1]=data.buff[0];
+	        dataCount++;
+	    }
+	    buffer[2]=dataCount*2;
+	    return dataCount*2+3;
+
 }
 uint8_t ResponseForceSingleCoil_05(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x05, OK!!!!
 {
-//    uint16_t coilID = 0;
-//    uint16_t value = 0;
-//
-//    coilID = mb.start; //coil index
-//
-//    value = mb.quantity; //coil value
-//    if (value == 0 || value == 65280)   // 0 or 1, 0000h or FF00h
-//    {
-//        SetCoilValue(coilID, value > 0);
-//    }
-//    for (int i = 5; i < 13; i++)
-//    {
-//        sendBuffer[i] = buffer[i];
-//    }
-//
-//    return 13;
+    uint16_t coilID = 0;
+    uint16_t value = 0;
+
+    coilID = mb.start; //coil index
+
+    value = mb.quantity; //coil value
+    if (value == 0 || value == 65280)   // 0 or 1, 0000h or FF00h
+    {
+        SetCoilValue(coilID, value > 0);
+    }
+
+
+    return 6;
 }
 
 uint8_t ResponsePresetSingleRegister_06(uint8_t *buffer, uint8_t size, Modbus_t mb) //0x06, OK!!!!
 {
-//    uint16_t registerID = 0;
-//    uint16_t value = 0;
-//
-//    registerID = mb.start; //register index
-//
-//    value = mb.quantity; //register value
-//    SetHoldingRegisterValue_u16_driver(registerID, value);
-//    for (int i = 5; i < 13; i++)
-//    {
-//        sendBuffer[i] = buffer[i];
-//    }
-//
-//    return 13;
+    uint16_t registerID = 0;
+    uint16_t value = 0;
+
+    registerID = mb.start; //register index
+
+    value = mb.quantity; //register value
+    SetHoldingRegisterValue_u16_driver(registerID, value);
+    for (int i = 5; i < 13; i++)
+    {
+        sendBuffer[i] = buffer[i];
+    }
+
+    return 6;
 }
 
 uint8_t ResponseForceMultipleCoils_15(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x0F, OK
 {
 
-//    uint16_t i = 0;
-//    uint8_t coils = 0, k = 0, new_data_count = 0, tempAdr = 0;
-//    uint8_t index = 0, offset = 0;
-//    uint16_t parameters[20];
-//    uint8_t byte_count;
-//
-//    //
-//    new_data_count = AsciiToByte(ascii_frame[13], ascii_frame[14]);
-//    data_count = 15;
-//    //
-//    //    /* read new coils values */
-//    byte_count = 0;
-//    for (i = 0; i < new_data_count; i++)
-//    {
-//        coils = AsciiToByte(ascii_frame[data_count], ascii_frame[data_count + 1]);
-//        data_count += 2;
-//        parameters[byte_count++] = coils;
-//    }
-//    //
-//    //    /* force coils status */
-//    for (i = mb.start; i < mb.limit; i++)
-//    {
-//        tempAdr = i - mb.start;
-//        index = tempAdr / 8;
-//        offset = tempAdr % 8;
-//        k = (parameters[index] & (1 << offset));
-//        SetCoilValue(i, k > 0); // force status of coil i with k
-//    }
-//
-//    return 13;
+    uint16_t i = 0;
+    uint8_t coils = 0, k = 0, new_data_count = 0, tempAdr = 0;
+    uint8_t index = 0, offset = 0;
+    uint16_t parameters[20];
+    uint8_t byte_count;
+
+    //
+    new_data_count =buffer[6];
+    data_count = 7;
+    //
+    //    /* read new coils values */
+    byte_count = 0;
+    for (i = 0; i < new_data_count; i++)
+    {
+        coils =buffer[data_count];
+        data_count += 1;
+        parameters[byte_count++] = coils;
+    }
+    //
+    //    /* force coils status */
+    for (i = mb.start; i < mb.limit; i++)
+    {
+        tempAdr = i - mb.start;
+        index = tempAdr / 8;
+        offset = tempAdr % 8;
+        k = (parameters[index] & (1 << offset));
+        SetCoilValue(i, k > 0); // force status of coil i with k
+    }
+
+    return 6;
 }
 
 uint8_t ResponsePresetMultipleRegisters_16(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x10, OK!!!
 {
 
-//    uint16_t i = 0, reg_value = 0, sendIndex = 0;
-//    //    signed char j = 0;
-//    uint8_t byte_count;
-//
-//    //    start = AsciiToTwoByte();
-//
-//    //    cant = AsciiToTwoByte();
-//    //    limit = start + cant;
-//    //
-//    byte_count = AsciiToByte(buffer[13], buffer[14]);
-//    sendIndex = 15;
-//    for (i = 5; i < 13; i++)
-//    {
-//        sendBuffer[i] = buffer[i];
-//    }
-//    //    /* read and set new holding registers values */
-//    byte_count /= 2;
-//
-//    for (i = 0; i < byte_count; i++)
-//    {
-//        reg_value = AsciiToTwoByte(&buffer[sendIndex]);
-//        SetHoldingRegisterValue_u16_driver(mb.start++, reg_value);
-//        sendIndex += 4;
-//    }
-//
-//    return 13;
+    uint16_t i = 0, reg_value = 0, sendIndex = 0;
+    uint8_t byte_count;
+    union{
+    	    uint16_t val ;
+    	    uint8_t buff[2];
+    		}data;
+    byte_count = buffer[6];
+    sendIndex = 7;
+
+    /* read and set new holding registers values */
+
+
+    for (i = 0; i < byte_count; i++)
+    {
+        data.buff[1] = buffer[sendIndex++];
+        data.buff[0] = buffer[sendIndex++];
+        SetHoldingRegisterValue_u16_driver(mb.start++, data.val);
+
+    }
+
+    return 6;
 }

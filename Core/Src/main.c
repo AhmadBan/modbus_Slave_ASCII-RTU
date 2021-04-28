@@ -49,7 +49,7 @@
 
 /* USER CODE BEGIN PV */
 
-uint8_t mbBuffer[ASCII_FRAME_SIZE];
+
 extern union
 {
   uint16_t u16_holding_registers_array[MAX_HOLDING_REGISTERS];
@@ -116,7 +116,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   initModbus();
-  HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
+
   SetHoldingRegisterValue_s16(50, -9999);
   SetHoldingRegisterValue_u16(1, 9998);
   SetHoldingRegisterValue_u32(10, 66888);
@@ -189,12 +189,6 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-{
-
-  execute_modbus_command(mbBuffer, Size);
-  HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
-}
 
 /* USER CODE END 4 */
 

@@ -28,7 +28,7 @@
 /* USER CODE BEGIN Includes */
 
 #include "Modbus.h"
-#include "slave.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/

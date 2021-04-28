@@ -15,6 +15,29 @@ uint8_t numericBuffer[ASCII_FRAME_SIZE / 2];
 //TODO:implement a callback method for broadcasting and a procedure to register the callback inside
 volatile uint8_t broadcast = 0;//flag shows master is broadcasting a request not used here but reserved for future use
 
+union
+{
+    uint16_t u16_holding_registers_array[MAX_HOLDING_REGISTERS];
+    int16_t s16_holding_registers_array[MAX_HOLDING_REGISTERS];
+    uint32_t u32_holding_registers_array[MAX_HOLDING_REGISTERS / 2];
+    int32_t s32_holding_registers_array[MAX_HOLDING_REGISTERS / 2];
+    float f32_holding_registers_array[MAX_HOLDING_REGISTERS / 2];
+
+} holdingRegister;
+
+union
+{
+    uint16_t u16_input_registers_array[MAX_INPUTS_REGISTERS];
+    int16_t s16_input_registers_array[MAX_INPUTS_REGISTERS];
+    uint32_t u32_input_registers_array[MAX_INPUTS_REGISTERS / 2];
+    int32_t s32_input_registers_array[MAX_INPUTS_REGISTERS / 2];
+    float f32_input_registers_array[MAX_INPUTS_REGISTERS / 2];
+} inputRegister;
+
+uint8_t coils_array[MAX_COILS];
+uint8_t inputs_array[MAX_INPUTS];
+
+
 //variables to map control code handler into function code. This is some sort of polymorphism :)
 struct
 {
@@ -54,6 +77,141 @@ static uint8_t ResponsePresetSingleRegister_06(uint8_t *buffer, uint8_t size, Mo
 static uint8_t ResponseForceMultipleCoils_15(uint8_t *buffer, uint8_t size, Modbus_t mb); // 0x0F, OK
 static uint8_t ResponsePresetMultipleRegisters_16(uint8_t *buffer, uint8_t size, Modbus_t mb);
 
+static uint8_t AsciiToByte(uint8_t msb, uint8_t lsb);
+static uint8_t NibbleToAscii(uint8_t val);
+static void ByteToAscii(uint8_t val,uint8_t* buffer);
+
+
+static uint16_t GetHoldingRegisterValue_u16_driver(uint16_t adr);
+static void SetHoldingRegisterValue_u16_driver(uint16_t adr, uint16_t value);
+static uint16_t GetInputRegisterValue_u16_driver(uint16_t adr);
+
+/* holding registers read-write operations */
+
+
+/***********************************************************
+ * Function name: GetHoldingRegisterValue_u16_driver(uint16_t adr)
+ * Description: get data from address requested by master in holding register
+ * Parameter adr :address requested by master
+ * Return value: value in the address
+ * Remarks:never use it to get data in your application instead use GetHoldingRegisterValue_u16 function
+ ***********************************************************/
+static uint16_t GetHoldingRegisterValue_u16_driver(uint16_t adr)
+{
+    if (adr < 0 || adr > MAX_HOLDING_REGISTERS)
+    {
+        return 0; // invalid register address
+    }
+    else
+    {
+        return holdingRegister.u16_holding_registers_array[adr];
+    }
+}
+
+
+/***********************************************************
+ * Function name:SetHoldingRegisterValue_u16_driver(uint16_t adr, uint16_t value)
+ * Description: set data to address requested by master
+ * Parameter adr :address requested by master
+ * Parameter value :new value to be set in address
+ * Return value: None
+ * Remarks:never use it to set data in your application instead use SetHoldingRegisterValue_u16 function
+ ***********************************************************/
+static void SetHoldingRegisterValue_u16_driver(uint16_t adr, uint16_t value)
+{
+    if (adr < 0 || adr > MAX_HOLDING_REGISTERS || value < 0 || value > 65535)
+    {
+        return; // invalid register address
+    }
+    else
+    {
+        holdingRegister.u16_holding_registers_array[adr] = value;
+    }
+}
+
+/***********************************************************
+ * Function name: GetInputRegisterValue_u16_driver(uint16_t adr)
+ * Description: get data from address requested by master in input register
+ * Parameter adr :address requested by master
+ * Return value: value in the address
+ * Remarks:never use it to get data in your application instead use GetInputRegisterValue_u16 function
+ ***********************************************************/
+static uint16_t GetInputRegisterValue_u16_driver(uint16_t adr)
+{
+    if (adr < 0 || adr > MAX_INPUTS_REGISTERS)
+    {
+        return 0; // invalid register address
+    }
+    else
+    {
+        return inputRegister.u16_input_registers_array[adr];
+    }
+}
+
+
+/***********************************************************
+ * Function name: AsciiToByte(uint8_t a, uint8_t b)
+ * Description: convert two nibble of ASCII hex to a binary byte
+ * Parameter msb : most significant nibble of byte
+ * Parameter lsb : least significant nibble of byte
+ * Return value: converted value in byte
+ * Remarks:None
+ ***********************************************************/
+static uint8_t AsciiToByte(uint8_t msb, uint8_t lsb)
+{
+	if (msb >= 65)
+	{
+		msb = msb - 'A' + 10;
+	}
+	else
+	{
+		msb = msb - '0';
+	}
+	if (lsb >= 65)
+	{
+		lsb = lsb - 'A' + 10;
+	}
+	else
+	{
+		lsb = lsb - '0';
+	}
+	return (16 * msb) + lsb;
+}
+
+/***********************************************************
+ * Function name: NibbleToAscii(uint8_t val)
+ * Description: converts a nibble of binary byte to an ASCII hex
+ * Parameter val : nibble of binary must be between 0 and 15
+ * Return value: converted value in ascii
+ * Remarks:None
+ ***********************************************************/
+static uint8_t NibbleToAscii(uint8_t val)
+{
+	if (val <= 9)
+	{
+		return val + '0';
+	}
+	else
+	{
+		return (val - 10) + 'A';
+	}
+}
+
+/***********************************************************
+ * Function name: ByteToAscii(uint8_t val,uint8_t* buffer)
+ * Description: converts a nibble of binary byte to an ASCII hex
+ * Parameter val : nibble of binary must be between 0 and 15
+ * Return value: converted value in ascii
+ * Remarks:None
+ ***********************************************************/
+static void ByteToAscii(uint8_t val,uint8_t* buffer)
+{
+	uint8_t a = val / 16;
+	uint8_t b = val % 16;
+	buffer[0]= NibbleToAscii(a);
+	buffer[1] =NibbleToAscii(b);
+	return ;
+}
 
 
 
@@ -198,7 +356,7 @@ static uint8_t transmitFrame(uint8_t *buffer, uint8_t size)
  ***********************************************************/
 static uint8_t checkLRCCorrect(uint8_t *buffer, uint8_t size)
 {
-	uint8_t lrc = 0;
+
 
 	if (calcLRC(buffer, size - 2) != buffer[size - 2])
 	{
@@ -586,7 +744,7 @@ static uint8_t ResponseForceMultipleCoils_15(uint8_t *buffer, uint8_t size, Modb
 static uint8_t ResponsePresetMultipleRegisters_16(uint8_t *buffer, uint8_t size, Modbus_t mb) // 0x10, OK!!!
 {
 
-	uint16_t i = 0, reg_value = 0, sendIndex = 0;
+	uint16_t i = 0,  sendIndex = 0;
 	uint8_t byte_count;
 	union
 	{
@@ -653,8 +811,7 @@ uint8_t execute_modbus_command(uint8_t *buffer, uint8_t size)
 	if (!convert2Byte(buffer, size, selectBuff))
 	{
 		//input array is NULL. please allocate memory for input
-		while (1)
-			;
+		while (1);
 	}
 
 	numericSize = (size - 1) / 2;
@@ -700,10 +857,517 @@ uint8_t execute_modbus_command(uint8_t *buffer, uint8_t size)
 
 	return 1;
 }
-
+/***********************************************************
+ * Function name:HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+ * Description: a call back that is run when data is received from port
+ * Parameter huart :port to which data is received from and send to
+ * Parameter size : length of received data
+ * Return value:None
+ * Remarks:None
+ ***********************************************************/
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
 
   execute_modbus_command(mbBuffer, Size);
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
+}
+/***********************************************************
+ * Function name:GetCoilValue(uint16_t adr)
+ * Description: get coil data from address passed by user
+ * Parameter adr :address requested by user
+ * Return value: a byte in which the corresponding bit related to address is 1 if ON otherwise in 0
+ * Remarks:None
+ ***********************************************************/
+uint8_t GetCoilValue(uint16_t adr)
+{
+    uint8_t res = 0, i = 0, d = 0;
+    if (adr < 0 || adr > MAX_COILS * 8)
+    {
+        return 0;
+    }
+    i = adr / 8;
+    d = adr % 8;
+    res = (coils_array[i] & (1 << d));
+    return res > 0;
+}
+/***********************************************************
+ * Function name: SetCoilValue(uint16_t adr, uint8_t value)
+ * Description: turn on or off coil bit corresponds to address passed by user
+ * Parameter adr :address requested by user
+ * Parameter value : uint8_t type value to be set either is 1 or 0
+ * Return value: None
+ * Remarks:None
+ ***********************************************************/
+void SetCoilValue(uint16_t adr, uint8_t value)
+{
+    uint8_t res = 0, i = 0, d = 0;
+    if (adr < 0 || adr > MAX_COILS * 8)
+    {
+        return;
+    }
+    i = adr / 8;
+    d = adr % 8;
+    res = (coils_array[i] & (1 << d));
+    if (res > 0)
+    {
+        res = 1; //coil on
+    }
+    else
+    {
+        res = 0; //coil off
+    }
+    if (res == 1 && value == 1)
+        return; // already ON
+    if (res == 0 && value == 0)
+        return;                 // already OFF
+    if (res == 0 && value == 1) // is off turn on
+    {
+        coils_array[i] = (coils_array[i] | (1 << d)); // active coil
+    }
+    if (res == 1 && value == 0) // is on turn off
+    {
+        coils_array[i] = (coils_array[i] & (~(1 << d))); // desactive coil
+    }
+    return;
+}
+
+void setCoilMulti(uint8_t address,uint8_t value){
+	//d
+}
+
+
+/***********************************************************
+ * Function name: GetHoldingRegisterValue_u16(uint16_t adr)
+ * Description: get 16-bit unsigned integer data from address passed by user in holding register
+ * Parameter adr :address requested by user
+ * Return value: uint16_t value read from address
+ * Remarks:None
+ ***********************************************************/
+uint16_t GetHoldingRegisterValue_u16(uint16_t adr)
+{
+    if (adr < 0 || adr > MAX_HOLDING_REGISTERS)
+    {
+        return 0; // invalid register address
+    }
+    else
+    {
+        return holdingRegister.u16_holding_registers_array[adr - 1];
+    }
+}
+
+/***********************************************************
+ * Function name: GetHoldingRegisterValue_s16(uint16_t adr)
+ * Description: get 16-bit signed integer data from address passed by user in holding register
+ * Parameter adr :address requested by user
+ * Return value: int16_t value read from address
+ * Remarks:None
+ ***********************************************************/
+int16_t GetHoldingRegisterValue_s16(uint16_t adr)
+{
+    if (adr < 0 || adr > MAX_HOLDING_REGISTERS)
+    {
+        return 0; // invalid register address
+    }
+    else
+    {
+        return holdingRegister.s16_holding_registers_array[adr - 1];
+    }
+}
+
+//care must be taken to pass correct address because it returns 32-bit unsigned
+/***********************************************************
+ * Function name: GetHoldingRegisterValue_u32(uint16_t adr)
+ * Description: get 32-bit unsigned integer data from address passed by user in holding register
+ * Parameter adr :address requested by user
+ * Return value: uint32_t value read from address
+ * Remarks:None
+ ***********************************************************/
+uint32_t GetHoldingRegisterValue_u32(uint16_t adr)
+{
+    if (adr < 0 || adr > MAX_HOLDING_REGISTERS)
+    {
+        return 0; // invalid register address
+    }
+    else
+    {
+
+        return holdingRegister.u32_holding_registers_array[adr];
+    }
+}
+/***********************************************************
+ * Function name: GetHoldingRegisterValue_s32(uint16_t adr)
+ * Description: get 32-bit signed integer data from address passed by user in holding register
+ * Parameter adr :address requested by user
+ * Return value: int32_t value read from address
+ * Remarks:None
+ ***********************************************************/
+int32_t GetHoldingRegisterValue_s32(uint16_t adr)
+{
+    if (adr < 0 || adr > MAX_HOLDING_REGISTERS)
+    {
+        return 0; // invalid register address
+    }
+    else
+    {
+        return holdingRegister.s32_holding_registers_array[adr];
+    }
+}
+/***********************************************************
+ * Function name: GetHoldingRegisterValue_f32(uint16_t adr)
+ * Description: get 32-bit float data from address passed by user in holding register
+ * Parameter adr :address requested by user
+ * Return value: float value read from address
+ * Remarks:None
+ ***********************************************************/
+float GetHoldingRegisterValue_f32(uint16_t adr)
+{
+    if (adr < 0 || adr > MAX_HOLDING_REGISTERS)
+    {
+        return 0; // invalid register address
+    }
+    else
+    {
+        return holdingRegister.f32_holding_registers_array[adr];
+    }
+}
+/***********************************************************
+ * Function name: SetHoldingRegisterValue_u16(uint16_t adr, uint16_t value)
+ * Description: set 16-bit unsigned integer data to address passed by user in holding register
+ * Parameter adr :address requested by user
+ * Return value: uint16_t value read from address
+ * Remarks:None
+ ***********************************************************/
+void SetHoldingRegisterValue_u16(uint16_t adr, uint16_t value)
+{
+    if (adr < 0 || adr > MAX_HOLDING_REGISTERS || value < 0 || value > 65535)
+    {
+        return; // invalid register address
+    }
+    else
+    {
+        holdingRegister.u16_holding_registers_array[adr - 1] = value;
+    }
+}
+/***********************************************************
+ * Function name: SetHoldingRegisterValue_s16(uint16_t adr, int16_t value)
+ * Description: set 16-bit signed integer data to address passed by user in holding register
+ * Parameter adr :address requested by user
+ * Return value: int16_t value read from address
+ * Remarks:None
+ ***********************************************************/
+void SetHoldingRegisterValue_s16(uint16_t adr, int16_t value)
+{
+    if (adr < 0 || adr > MAX_HOLDING_REGISTERS)
+    {
+        return; // invalid register address
+    }
+    else
+    {
+        holdingRegister.s16_holding_registers_array[adr - 1] = value;
+    }
+}
+/***********************************************************
+ * Function name: SetHoldingRegisterValue_u32(uint16_t adr, uint32_t value)
+ * Description: set 32-bit unsigned integer data to address passed by user in holding register
+ * Parameter adr :address requested by user
+ * Return value: uint32_t value read from address
+ * Remarks:None
+ ***********************************************************/
+void SetHoldingRegisterValue_u32(uint16_t adr, uint32_t value)
+{
+
+    if (adr < 0 || adr > MAX_HOLDING_REGISTERS || value < 0)
+    {
+        return; // invalid register address
+    }
+    else
+    {
+        holdingRegister.u32_holding_registers_array[adr] = value;
+    }
+}
+/***********************************************************
+ * Function name: SetHoldingRegisterValue_s32(uint16_t adr, int32_t value)
+ * Description: set 32-bit signed integer data to address passed by user in holding register
+ * Parameter adr :address requested by user
+ * Return value: int32_t value read from address
+ * Remarks:None
+ ***********************************************************/
+void SetHoldingRegisterValue_s32(uint16_t adr, int32_t value)
+{
+    if (adr < 0 || adr > MAX_HOLDING_REGISTERS)
+    {
+        return; // invalid register address
+    }
+    else
+    {
+        holdingRegister.s32_holding_registers_array[adr] = value;
+    }
+}
+/***********************************************************
+ * Function name: SetHoldingRegisterValue_f32(uint16_t adr, float value)
+ * Description: set 32-bit float data to address passed by user in holding register
+ * Parameter adr :address requested by user
+ * Return value: float value read from address
+ * Remarks:None
+ ***********************************************************/
+void SetHoldingRegisterValue_f32(uint16_t adr, float value)
+{
+    if (adr < 0 || adr > MAX_HOLDING_REGISTERS)
+    {
+        return; // invalid register address
+    }
+    else
+    {
+        holdingRegister.f32_holding_registers_array[adr] = value;
+    }
+}
+/***********************************************************
+ * Function name: GetInputRegisterValue_u16(uint16_t adr)
+ * Description: get 16-bit unsigned integer data from address passed by user in input register
+ * Parameter adr :address requested by user
+ * Return value: uint16_t value read from address
+ * Remarks:None
+ ***********************************************************/
+uint16_t GetInputRegisterValue_u16(uint16_t adr)
+{
+    if (adr < 0 || adr > MAX_INPUTS_REGISTERS)
+    {
+        return 0; // invalid register address
+    }
+    else
+    {
+        return inputRegister.u16_input_registers_array[adr - 1];
+    }
+}
+/***********************************************************
+ * Function name: GetInputRegisterValue_s16(uint16_t adr)
+ * Description: get 16-bit signed integer data from address passed by user in input register
+ * Parameter adr :address requested by user
+ * Return value: int16_t value read from address
+ * Remarks:None
+ ***********************************************************/
+int16_t GetInputRegisterValue_s16(uint16_t adr)
+{
+    if (adr < 0 || adr > MAX_INPUTS_REGISTERS)
+    {
+        return 0; // invalid register address
+    }
+    else
+    {
+        return inputRegister.s16_input_registers_array[adr];
+    }
+}
+
+//care must be taken to pass correct address because it returns 32-bit unsigned
+/***********************************************************
+ * Function name: GetInputRegisterValue_u32(uint16_t adr)
+ * Description: get 32-bit unsigned integer data from address passed by user in input register
+ * Parameter adr :address requested by user
+ * Return value: uint32_t value read from address
+ * Remarks:None
+ ***********************************************************/
+uint32_t GetInputRegisterValue_u32(uint16_t adr)
+{
+    if (adr < 0 || adr > MAX_INPUTS_REGISTERS)
+    {
+        return 0; // invalid register address
+    }
+    else
+    {
+        return inputRegister.u32_input_registers_array[adr];
+    }
+}
+/***********************************************************
+ * Function name: GetInputRegisterValue_s32(uint16_t adr)
+ * Description: get 32-bit signed integer data from address passed by user in input register
+ * Parameter adr :address requested by user
+ * Return value: int32_t value read from address
+ * Remarks:None
+ ***********************************************************/
+int32_t GetInputRegisterValue_s32(uint16_t adr)
+{
+    if (adr < 0 || adr > MAX_INPUTS_REGISTERS)
+    {
+        return 0; // invalid register address
+    }
+    else
+    {
+        return inputRegister.s32_input_registers_array[adr];
+    }
+}
+/***********************************************************
+ * Function name: GetInputRegisterValue_f32(uint16_t adr)
+ * Description: get 32-bit float data from address passed by user in input register
+ * Parameter adr :address requested by user
+ * Return value: float value read from address
+ * Remarks:None
+ ***********************************************************/
+float GetInputRegisterValue_f32(uint16_t adr)
+{
+    if (adr < 0 || adr > MAX_INPUTS_REGISTERS)
+    {
+        return 0; // invalid register address
+    }
+    else
+    {
+        return inputRegister.f32_input_registers_array[adr];
+    }
+}
+
+
+/***********************************************************
+ * Function name: SetInputStatusValue(uint16_t adr, uint8_t value)
+ * Description: turn on or off input status bit corresponds to address passed by user
+ * Parameter adr :address requested by user
+ * Parameter value : uint8_t type value to be set either is 1 or 0
+ * Return value: None
+ * Remarks:None
+ ***********************************************************/
+void SetInputStatusValue(uint16_t adr, uint8_t value)
+{
+    uint8_t res = 0, i = 0, d = 0;
+    if (adr < 0 || adr > MAX_COILS * 8)
+    {
+        return;
+    }
+    i = adr / 8;
+    d = adr % 8;
+    res = (inputs_array[i] & (1 << d));
+    if (res > 0)
+    {
+        res = 1; //coil on
+    }
+    else
+    {
+        res = 0; //coil off
+    }
+    if (res == 1 && value == 1)
+        return; // already ON
+    if (res == 0 && value == 0)
+        return;                 // already OFF
+    if (res == 0 && value == 1) // is off turn on
+    {
+    	inputs_array[i] = (inputs_array[i] | (1 << d)); // active coil
+    }
+    if (res == 1 && value == 0) // is on turn off
+    {
+    	inputs_array[i] = (inputs_array[i] & (~(1 << d))); // desactive coil
+    }
+    return;
+}
+/***********************************************************
+ * Function name: GetInputStatusValue(uint16_t adr)
+ * Description: get input status data from address passed by user
+ * Parameter adr :address requested by user
+ * Return value: a byte in which the corresponding bit related to address is 1 if ON otherwise in 0
+ * Remarks:None
+ ***********************************************************/
+uint8_t GetInputStatusValue(uint16_t adr)
+{
+    uint8_t res = 0, i = 0, d = 0;
+    if (adr < 0 || adr > MAX_INPUTS * 8)
+    {
+        return 0;
+    }
+    i = adr / 8;
+    d = adr % 8;
+    res = (inputs_array[i] & (1 << d));
+    return res > 0;
+}
+/***********************************************************
+ * Function name: SetInputRegisterValue_u16(uint16_t adr, uint16_t value)
+ * Description: set 16-bit unsigned integer data to address passed by user in input register
+ * Parameter adr :address requested by user
+ * Parameter value : uint16_t type value to be set
+ * Return value: None
+ * Remarks:None
+ ***********************************************************/
+void SetInputRegisterValue_u16(uint16_t adr, uint16_t value)
+{
+    if (adr < 0 || adr > MAX_INPUTS_REGISTERS || value < 0 || value > 65535)
+    {
+        return; // invalid register address
+    }
+    else
+    {
+        inputRegister.u16_input_registers_array[adr - 1] = value;
+    }
+}
+/***********************************************************
+ * Function name: SetInputRegisterValue_s16(uint16_t adr, int16_t value)
+ * Description: set 16-bit signed integer data to address passed by user in input register
+ * Parameter adr :address requested by user
+ * Parameter value : int16_t type value to be set
+ * Return value: None
+ * Remarks:None
+ ***********************************************************/
+void SetInputRegisterValue_s16(uint16_t adr, int16_t value)
+{
+    if (adr < 0 || adr > MAX_INPUTS_REGISTERS)
+    {
+        return; // invalid register address
+    }
+    else
+    {
+        inputRegister.s16_input_registers_array[adr - 1] = value;
+    }
+}
+/***********************************************************
+ * Function name: SetInputRegisterValue_u32(uint16_t adr, uint32_t value)
+ * Description: set 32-bit unsigned integer data to address passed by user in input register
+ * Parameter adr :address requested by user
+ * Parameter value : uint32_t type value to be set
+ * Return value: None
+ * Remarks:None
+ ***********************************************************/
+void SetInputRegisterValue_u32(uint16_t adr, uint32_t value)
+{
+
+    if (adr < 0 || adr > MAX_INPUTS_REGISTERS || value < 0)
+    {
+        return; // invalid register address
+    }
+    else
+    {
+        inputRegister.u32_input_registers_array[adr] = value;
+    }
+}
+/***********************************************************
+ * Function name: SetInputRegisterValue_s32(uint16_t adr, int32_t value)
+ * Description: set 32-bit signed integer data to address passed by user in input register
+ * Parameter adr :address requested by user
+ * Parameter value : int32_t type value to be set
+ * Return value: None
+ * Remarks:None
+ ***********************************************************/
+void SetInputRegisterValue_s32(uint16_t adr, int32_t value)
+{
+    if (adr < 0 || adr > MAX_INPUTS_REGISTERS)
+    {
+        return; // invalid register address
+    }
+    else
+    {
+        inputRegister.s32_input_registers_array[adr] = value;
+    }
+}
+
+/***********************************************************
+ * Function name: SetInputRegisterValue_f32(uint16_t adr, float value)
+ * Description: set 32-bit float data to address passed by user in input register
+ * Parameter adr :address requested by user
+ * Parameter value : 32-bit float value to be set
+ * Return value: None
+ * Remarks:None
+ ***********************************************************/
+void SetInputRegisterValue_f32(uint16_t adr, float value)
+{
+    if (adr < 0 || adr > MAX_INPUTS_REGISTERS)
+    {
+        return; // invalid register address
+    }
+    else
+    {
+        inputRegister.f32_input_registers_array[adr] = value;
+    }
 }

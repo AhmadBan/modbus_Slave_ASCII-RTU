@@ -187,9 +187,6 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
   if(responseLength>0)
 	  HAL_UART_Transmit_DMA(&huart1, sendBuffer, responseLength);
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
-
-
-
 }
 
 

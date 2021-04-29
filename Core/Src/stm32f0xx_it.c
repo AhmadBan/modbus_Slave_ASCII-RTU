@@ -44,10 +44,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-extern uint8_t rx;
-extern uint8_t mbBuffer[ASCII_FRAME_SIZE];
-extern uint8_t mbIndex;
-extern volatile uint8_t sof,eof,lastChar;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/

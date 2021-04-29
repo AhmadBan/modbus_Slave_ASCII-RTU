@@ -4,36 +4,28 @@
 
 
 #include "main.h"
-
-
-
-/* ASCII FRAME size */
-
-#define ASCII_FRAME_SIZE MAX_HOLDING_REGISTERS * 4 + 20 // In worst case if master try to read all of the register with one command send buffer must have length_of_register*4+header(which is less than 20 bytes)
-
-/* ASCII FRAME END CHARS */
-#define CR 0x0D
-#define LF 0x0A
-
+/*******************************************************************/
+//uncomment one of RTU or ASCII and compile library
 #define RTU
-typedef struct
-{
-	uint16_t start;
-	uint16_t quantity;
-	uint16_t limit;
-	uint8_t code;
-} Modbus_t;
-typedef uint8_t (*ModbusFuncCode_t)(uint8_t *buffer, uint8_t size, Modbus_t mb);
+//#define ASCII
+/*******************************************************************/
 
-#define DIR 0x01 //slave dir 5
+#define DEVICE_ID 0x01 //slave dir 5
+/*******************************************************************/
 /* data range */
 
 #define MAX_COILS 10
 #define MAX_INPUTS 10
 #define MAX_HOLDING_REGISTERS 50 //must be multiple 2 bacause it is used to save 4-byte variables
 #define MAX_INPUTS_REGISTERS 50
+#define ASCII_FRAME_SIZE MAX_HOLDING_REGISTERS * 4 + 20 // In worst case if master tries to read all of the register with one command, sending buffer must have length_of_register*4+header(header is less than 20 bytes)
 
-extern uint16_t holding_registers_array[MAX_HOLDING_REGISTERS];
+
+/****************variables*******************************************/
+extern uint8_t mbBuffer[ASCII_FRAME_SIZE];
+extern uint8_t sendBuffer[ASCII_FRAME_SIZE];
+
+/****************functions prototypes********************************/
 
 /* functions prototypes */
 uint8_t GetInputStatusValue(uint16_t adr);
@@ -72,6 +64,6 @@ void SetInputRegisterValue_f32(uint16_t adr, float value);
 void initModbus(void);
 /* functions prototypes*/
 uint8_t execute_modbus_command(uint8_t *buffer, uint8_t size);
-
+//void initComPortCallback(uint8_t* fillBuff);
 
 #endif

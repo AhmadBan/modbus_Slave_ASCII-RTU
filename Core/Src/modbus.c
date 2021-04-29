@@ -2,8 +2,20 @@
 
 //refer to https://www.modbustools.com/modbus.html
 
+/*************************defines********************************/
+#define CR 0x0D
+#define LF 0x0A
+/*************************typedefs********************************/
+typedef struct
+{
+	uint16_t start;
+	uint16_t quantity;
+	uint16_t limit;
+	uint8_t code;
+} Modbus_t;
 
-
+typedef uint8_t (*ModbusFuncCode_t)(uint8_t *buffer, uint8_t size, Modbus_t mb);
+/*************************declares********************************/
 
 uint8_t mbBuffer[ASCII_FRAME_SIZE];
 
@@ -43,15 +55,14 @@ struct
 {
 	ModbusFuncCode_t mbFunc;
 } mbState[17];
-
-/* static Function prototype*/
+/*************************static Function prototype********************************/
 
 //general static function
 static Modbus_t getModbusInfo(uint8_t *buffer, uint8_t size);
 static uint8_t convert2Protocol(uint8_t *byteArgIn, uint8_t size, uint8_t *asciiArgOut);
 static uint8_t convert2Byte(uint8_t *asciiArgIn, uint8_t size, uint8_t *byteArgOut);
 static uint8_t checkAddressCorrect(uint8_t *buffer, uint8_t size);
-static uint8_t transmitFrame(uint8_t *buffer, uint8_t size);
+
 
 //ASCII static function
 #ifdef ASCII
@@ -87,7 +98,7 @@ static void SetHoldingRegisterValue_u16_driver(uint16_t adr, uint16_t value);
 static uint16_t GetInputRegisterValue_u16_driver(uint16_t adr);
 
 /* holding registers read-write operations */
-
+/*************************implementation********************************/
 
 /***********************************************************
  * Function name: GetHoldingRegisterValue_u16_driver(uint16_t adr)
@@ -314,7 +325,7 @@ static uint8_t checkAddressCorrect(uint8_t *buffer, uint8_t size)
 	}
 
 	broadcast = 0;
-	if (DIR != is_me)
+	if (DEVICE_ID != is_me)
 	{
 		return 0;
 	}
@@ -323,26 +334,7 @@ static uint8_t checkAddressCorrect(uint8_t *buffer, uint8_t size)
 }
 
 
-/***********************************************************
- * Function name: transmitFrame(uint8_t *buffer, uint8_t size)
- * Description: sends frame of buffer to output port
- * Parameter buffer : a pointer to buffer that is going to be sent
- * Parameter size : size of buffer to be sent
- * Return value: returns 1 if success 0 if failed
- * Remarks:None
- ***********************************************************/
-static uint8_t transmitFrame(uint8_t *buffer, uint8_t size)
-{
-	if (broadcast == 1)
-	{
-		broadcast = 0;
 
-		return 1;
-	}
-	if(HAL_UART_Transmit_DMA(&huart1, buffer, size)!=HAL_OK)
-		return 0;
-	return 1;
-}
 
 
 #ifdef ASCII
@@ -766,6 +758,7 @@ static uint8_t ResponsePresetMultipleRegisters_16(uint8_t *buffer, uint8_t size,
 	return 6;
 }
 
+
 /***********************************************************
  * Function name: initModbus(void)
  * Description: initialize modbus in order to run correctly, It must be called once to activate protocol
@@ -787,7 +780,6 @@ void initModbus(void)
 	mbState[15].mbFunc = ResponseForceMultipleCoils_15;
 	mbState[16].mbFunc = ResponsePresetMultipleRegisters_16;
 
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
 }
 
 /***********************************************************
@@ -796,7 +788,7 @@ void initModbus(void)
  * Parameter buffer : a pointer to buffer that is going to be processed
  * Parameter size : size of buffer to be processed
  * parameter mb : Modbus_t type to send received packet information
- * Return value: 1 if success 0 if fails
+ * Return value: size of response
  * Remarks:None
  ***********************************************************/
 uint8_t execute_modbus_command(uint8_t *buffer, uint8_t size)
@@ -850,27 +842,19 @@ uint8_t execute_modbus_command(uint8_t *buffer, uint8_t size)
 		sendIndex = mbState[mb.code].mbFunc(selectBuff, numericSize, mb);
 
 	sendIndex = convert2Protocol(selectBuff, sendIndex, sendBuffer);
+	if (broadcast == 1)
+		{
+			broadcast = 0;
 
-	transmitFrame(sendBuffer, sendIndex);
+			return 0;
+		}
+
 
 	//transfer send buffer asynchronously by DMA
 
-	return 1;
+	return sendIndex;
 }
-/***********************************************************
- * Function name:HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
- * Description: a call back that is run when data is received from port
- * Parameter huart :port to which data is received from and send to
- * Parameter size : length of received data
- * Return value:None
- * Remarks:None
- ***********************************************************/
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-{
 
-  execute_modbus_command(mbBuffer, Size);
-  HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
-}
 /***********************************************************
  * Function name:GetCoilValue(uint16_t adr)
  * Description: get coil data from address passed by user
@@ -932,7 +916,7 @@ void SetCoilValue(uint16_t adr, uint8_t value)
 }
 
 void setCoilMulti(uint8_t address,uint8_t value){
-	//d
+	//TODO: implement this to use with code 15
 }
 
 

@@ -27,7 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include "Modbus.h"
+#include "modbus.h"
 
 /* USER CODE END Includes */
 
@@ -48,26 +48,6 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
-
-extern union
-{
-  uint16_t u16_holding_registers_array[MAX_HOLDING_REGISTERS];
-  int16_t s16_holding_registers_array[MAX_HOLDING_REGISTERS];
-  uint32_t u32_holding_registers_array[MAX_HOLDING_REGISTERS / 2];
-  int32_t s32_holding_registers_array[MAX_HOLDING_REGISTERS / 2];
-  float f32_holding_registers_array[MAX_HOLDING_REGISTERS / 2];
-
-} holdingRegister;
-
-extern union
-{
-  uint16_t u16_input_registers_array[MAX_INPUTS_REGISTERS];
-  int16_t s16_input_registers_array[MAX_INPUTS_REGISTERS];
-  uint32_t u32_input_registers_array[MAX_INPUTS_REGISTERS / 2];
-  int32_t s32_input_registers_array[MAX_INPUTS_REGISTERS / 2];
-  float f32_input_registers_array[MAX_INPUTS_REGISTERS / 2];
-} inputRegister;
 
 /* USER CODE END PV */
 
@@ -116,6 +96,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   initModbus();
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
 
   SetHoldingRegisterValue_s16(50, -9999);
   SetHoldingRegisterValue_u16(1, 9998);
@@ -190,6 +171,32 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 
 
+
+/***********************************************************
+ * Function name:HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+ * Description: a call back that is run when data is received from port
+ * Parameter huart :port to which data is received from and send to
+ * Parameter size : length of received data
+ * Return value:None
+ * Remarks:None
+ ***********************************************************/
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+  uint8_t responseLength;
+  responseLength=execute_modbus_command(mbBuffer, Size);
+  if(responseLength>0)
+	  HAL_UART_Transmit_DMA(&huart1, sendBuffer, responseLength);
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
+
+
+
+}
+
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
+
+}
 /* USER CODE END 4 */
 
  /**

@@ -37,18 +37,10 @@ int main(void)
 }
 ```
 
-after initialization Mocrocontroller tries to get data from master by using DMA and then after getting data it calls a callback function 
+after initialization Microcontroller tries to get data from master by using DMA and then after getting data it calls a callback function 
 
 ```c
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-{
-    //process received data
-    execute_modbus_command(mbBuffer, Size);
-    //initialize DMA to get data again from UART
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
-}
 
-//this callback reset DMA connection in case of any error with UART
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     uint8_t responseLength;
@@ -59,6 +51,14 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         HAL_UART_Transmit_DMA(&huart1, sendBuffer, responseLength);
     //initialize UART port again to receive request from master
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
+
+}
+
+
+//this callback reset DMA connection in case of any error with UART
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, mbBuffer, ASCII_FRAME_SIZE);
 
 }
 
